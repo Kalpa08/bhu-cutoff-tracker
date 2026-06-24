@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BHU Cutoff Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans min-h-screen">
+
+    <header class="bg-[#facc15] text-white py-6 shadow-md">
+        <div class="max-w-6xl mx-auto px-4">
+            <h1 class="text-3xl font-bold text-red-800">BHU Admissions Cutoff Explorer</h1>
+            <p class="text-red-700 mt-1">Easily search official cutoffs across all rounds, colleges, and academic years.</p>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-8">
+        
+        <div class="border-b border-gray-200 mb-6">
+            <nav id="yearTabsContainer" class="-mb-px flex justify-center space-x-8" aria-label="Tabs">
+                </nav>
+        </div>
+
+        <div class="flex justify-center mb-8">
+            <div class="bg-gray-200 p-1 rounded-lg inline-flex shadow-sm">
+                <button id="btnUG" onclick="switchCourseType('UG')" class="px-8 py-2 bg-white rounded-md shadow-sm text-sm font-bold text-red-700 transition-all">
+                    UG Admissions
+                </button>
+                <button id="btnPG" onclick="switchCourseType('PG')" class="px-8 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-all">
+                    PG Admissions
+                </button>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Select Program</label>
+                    <select id="courseFilter" class="w-full border border-gray-300 rounded-md p-2 bg-gray-50 text-sm">
+                        <option value="">All Programs</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Select College</label>
+                    <select id="collegeFilter" class="w-full border border-gray-300 rounded-md p-2 bg-gray-50 text-sm">
+                        <option value="">All Colleges</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Select Category</label>
+                    <select id="categoryFilter" class="w-full border border-gray-300 rounded-md p-2 bg-gray-50 text-sm">
+                        <option value="">All Categories</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Select Round</label>
+                    <select id="roundFilter" class="w-full border border-gray-300 rounded-md p-2 bg-gray-50 text-sm">
+                        <option value="">All Rounds</option>
+                    </select>
+                </div>
+
+            </div>
+        </div>
+
+        <div id="loading" class="text-center py-10 text-gray-500 font-medium">
+            Loading cutoff data from database...
+        </div>
+
+        <div class="overflow-x-auto bg-white rounded-lg shadow-sm border border-gray-200 hidden" id="tableContainer">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-gray-100 text-gray-700 text-xs uppercase tracking-wider">
+                        <th class="p-4 border-b">Program Name</th>
+                        <th class="p-4 border-b">College</th>
+                        <th class="p-4 border-b">Category</th>
+                        <th class="p-4 border-b">Round</th>
+                        <th class="p-4 border-b">Min Score</th>
+                        <th class="p-4 border-b">Max Score</th>
+                        <th class="p-4 border-b">Ranks (Min-Max)</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody" class="text-sm">
+                    </tbody>
+            </table>
+        </div>
+
+    </main>
+
+    <script>
+        // --- YOUR PUBLISHED CSV LINK ---
+        const SPREADSHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQnn0eQbpkOgdDYoN78j2pA1QL2RiSu8GT4FLbaxREwaj9wYMnH3IwYaYaJB31oi8RfPBhJ6ANyl3l1/pub?gid=555666777&single=true&output=csv";
+
+        let globalData = [];
+        let activeCourseType = 'UG'; 
+        let activeYear = ''; 
+        let availableYears = [];
+
+        Papa.parse(SPREADSHEET_CSV_URL, {
+            download: true,
+            header: true,
+            complete: function(results) {
+                globalData = results.data.filter(row => 
+                    row['Program_Name'] && 
+                    row['Program_Name'] !== 'Program_Name' &&
+                    row['Min NTA score'] !== 'Cutoff_Score'
+                ); 
+
+                // Safety Fallback: If 'Year' column is empty, assign '2025'
+                globalData.forEach(row => {
+                    if (!row['Year']) row['Year'] = '2025';
+                });
+
+                // Extract unique years and sort descending (newest first)
+                availableYears = [...new Set(globalData.map(item => item['Year'].trim()))].sort((a, b) => b - a);
+                activeYear = availableYears[0]; // Default to the newest year
+
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('tableContainer').classList.remove('hidden');
+                
+                renderYearTabs();
+                updateView();
+            }
+        });
+
+        // Generates the Year Tabs dynamically based on your Google Sheet
+        function renderYearTabs() {
+            const container = document.getElementById('yearTabsContainer');
+            container.innerHTML = '';
+
+            availableYears.forEach(year => {
+                const isActive = year === activeYear;
+                const baseClasses = "whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm cursor-pointer transition-all";
+                const activeClasses = "border-red-600 text-red-700";
+                const inactiveClasses = "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300";
+
+                const button = document.createElement('a');
+                button.className = `${baseClasses} ${isActive ? activeClasses : inactiveClasses}`;
+                button.textContent = `${year} Cutoffs`;
+                button.onclick = () => switchYear(year);
+                
+                container.appendChild(button);
+            });
+        }
+
+        // Handles clicking a different Year tab
+        function switchYear(year) {
+            activeYear = year;
+            renderYearTabs(); // Redraw tabs to update active styling
+            resetFilters();
+            updateView();
+        }
+
+        // Handles clicking the UG / PG buttons
+        function switchCourseType(type) {
+            activeCourseType = type;
+
+            const btnUG = document.getElementById('btnUG');
+            const btnPG = document.getElementById('btnPG');
+
+            if (type === 'UG') {
+                btnUG.className = "px-8 py-2 bg-white rounded-md shadow-sm text-sm font-bold text-red-700 transition-all";
+                btnPG.className = "px-8 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-all";
+            } else {
+                btnPG.className = "px-8 py-2 bg-white rounded-md shadow-sm text-sm font-bold text-red-700 transition-all";
+                btnUG.className = "px-8 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-all";
+            }
+
+            resetFilters();
+            updateView();
+        }
+
+        function resetFilters() {
+            document.getElementById('courseFilter').value = "";
+            document.getElementById('collegeFilter').value = "";
+            document.getElementById('categoryFilter').value = "";
+            document.getElementById('roundFilter').value = "";
+        }
+
+        // Filters data by BOTH Year and Course Type
+        function updateView() {
+            const typeData = globalData.filter(row => {
+                const rowType = (row['Course Type'] || 'UG').toUpperCase().trim();
+                const rowYear = row['Year'].trim();
+                return rowType === activeCourseType && rowYear === activeYear;
+            });
+
+            const courses = [...new Set(typeData.map(item => item['Program_Name']))].sort();
+            const colleges = [...new Set(typeData.map(item => item['Faculty/College Name']))].sort();
+            const categories = [...new Set(typeData.map(item => item['Allocated Category']))].sort();
+            const rounds = [...new Set(typeData.map(item => item['Round']))].sort();
+
+            const courseFilter = document.getElementById('courseFilter');
+            const collegeFilter = document.getElementById('collegeFilter');
+            const categoryFilter = document.getElementById('categoryFilter');
+            const roundFilter = document.getElementById('roundFilter');
+
+            courseFilter.innerHTML = '<option value="">All Programs</option>';
+            collegeFilter.innerHTML = '<option value="">All Colleges</option>';
+            categoryFilter.innerHTML = '<option value="">All Categories</option>';
+            roundFilter.innerHTML = '<option value="">All Rounds</option>';
+
+            courses.forEach(c => { if(c) courseFilter.innerHTML += `<option value="${c}">${c}</option>`; });
+            colleges.forEach(c => { if(c) collegeFilter.innerHTML += `<option value="${c}">${c}</option>`; });
+            categories.forEach(c => { if(c) categoryFilter.innerHTML += `<option value="${c}">${c}</option>`; });
+            rounds.forEach(r => { if(r) roundFilter.innerHTML += `<option value="${r}">${r}</option>`; });
+
+            filterTableData(typeData);
+        }
+
+        document.getElementById('courseFilter').addEventListener('change', () => updateViewFilterOnly());
+        document.getElementById('collegeFilter').addEventListener('change', () => updateViewFilterOnly());
+        document.getElementById('categoryFilter').addEventListener('change', () => updateViewFilterOnly());
+        document.getElementById('roundFilter').addEventListener('change', () => updateViewFilterOnly());
+
+        function updateViewFilterOnly() {
+            const typeData = globalData.filter(row => {
+                const rowType = (row['Course Type'] || 'UG').toUpperCase().trim();
+                const rowYear = row['Year'].trim();
+                return rowType === activeCourseType && rowYear === activeYear;
+            });
+            filterTableData(typeData);
+        }
+
+        function filterTableData(baseData) {
+            const courseVal = document.getElementById('courseFilter').value;
+            const collegeVal = document.getElementById('collegeFilter').value;
+            const categoryVal = document.getElementById('categoryFilter').value;
+            const roundVal = document.getElementById('roundFilter').value;
+
+            const filtered = baseData.filter(row => {
+                const matchCourse = courseVal === "" || row['Program_Name'] === courseVal;
+                const matchCollege = collegeVal === "" || row['Faculty/College Name'] === collegeVal;
+                const matchCategory = categoryVal === "" || row['Allocated Category'] === categoryVal;
+                const matchRound = roundVal === "" || row['Round'] === roundVal;
+
+                return matchCourse && matchCollege && matchCategory && matchRound;
+            });
+
+            renderTable(filtered);
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = "";
+
+            if(data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-gray-500">No cutoffs found for these filters.</td></tr>`;
+                return;
+            }
+
+            data.forEach(row => {
+                const program = row['Program_Name'] || '-';
+                const college = row['Faculty/College Name'] || '-';
+                const category = row['Allocated Category'] || '-';
+                const round = row['Round'] || '-';
+                
+                const minScore = row['Min NTA score'] || '-';
+                const maxScore = row['max_score'] || '-';
+                const minRank = row['min_rank'] || '-';
+                const maxRank = row['max_rank'] || '-';
+
+                const rankDisplay = (minRank !== '-' && maxRank !== '-') ? `${minRank} - ${maxRank}` : '-';
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50 border-b";
+                tr.innerHTML = `
+                    <td class="p-4 font-medium text-gray-900">${program}</td>
+                    <td class="p-4 text-xs text-gray-600">${college}</td>
+                    <td class="p-4"><span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-semibold uppercase">${category}</span></td>
+                    <td class="p-4 text-gray-600 font-medium">${round}</td>
+                    <td class="p-4 font-bold text-red-600">${parseFloat(minScore).toFixed(2) || minScore}</td>
+                    <td class="p-4 font-semibold text-gray-700">${parseFloat(maxScore).toFixed(2) || maxScore}</td>
+                    <td class="p-4 text-gray-600 text-xs">${rankDisplay}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    </script>
+</body>
+</html>
