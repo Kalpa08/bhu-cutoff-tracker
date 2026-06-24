@@ -222,7 +222,7 @@
             display: inline-flex; align-items: center; gap: 5px;
             background: rgba(255,255,255,0.1);
             border: 1px solid rgba(255,255,255,0.15);
-            border-radius: 9999py;
+            border-radius: 9999px;
             padding: 4px 12px;
             font-size: 12px;
             font-weight: 500;
@@ -457,11 +457,12 @@
 
 <script>
     // ════════════════════════════════════════════════════════════════════════════
-    // SECURITY: Data sanitization utilities
+    // SECURITY: Only XSS protection (HTML escaping)
     // ════════════════════════════════════════════════════════════════════════════
     
     /**
-     * Escapes HTML special characters to prevent XSS
+     * Escapes HTML special characters to prevent XSS attacks
+     * This is ONLY protection against external attacks via rendered HTML
      */
     function escapeHtml(text) {
         if (typeof text !== 'string') return String(text || '');
@@ -476,65 +477,11 @@
         return text.replace(/[&<>"'\/]/g, char => map[char]);
     }
 
-    /**
-     * Validates if a value is a valid numeric score
-     */
-    function isValidScore(value) {
-        if (!value || value === '') return false;
-        const num = parseFloat(value);
-        return !isNaN(num) && num >= 0 && num <= 1000;
-    }
-
-    /**
-     * Validates if a value is a valid rank
-     */
-    function isValidRank(value) {
-        if (!value || value === '') return false;
-        const num = parseInt(value);
-        return !isNaN(num) && num > 0 && num <= 10000000;
-    }
-
-    /**
-     * RELAXED CSV validation - only reject if Program_Name is missing
-     */
-    function validateAndSanitizeRow(row) {
-        try {
-            // REQUIRED: Program name must exist
-            if (!row['Program_Name'] || !String(row['Program_Name']).trim()) {
-                return null;
-            }
-            
-            // Sanitize string fields (prevent XSS)
-            row['Program_Name'] = escapeHtml(String(row['Program_Name']).trim());
-            row['Faculty/College Name'] = escapeHtml(String(row['Faculty/College Name'] || '—').trim());
-            row['Allocated Category'] = escapeHtml(String(row['Allocated Category'] || '—').trim());
-            row['Round'] = escapeHtml(String(row['Round'] || '—').trim());
-            row['Course Type'] = String(row['Course Type'] || 'UG').toUpperCase().trim();
-            row['Year'] = String(row['Year'] || '2025').trim();
-            
-            // Handle numeric fields - keep original if invalid (don't reject row)
-            const minScore = row['Min NTA score'];
-            const maxScore = row['max_score'];
-            
-            row['Min NTA score'] = isValidScore(minScore) ? parseFloat(minScore) : null;
-            row['max_score'] = isValidScore(maxScore) ? parseFloat(maxScore) : null;
-            row['min_rank'] = isValidRank(row['min_rank']) ? row['min_rank'] : null;
-            row['max_rank'] = isValidRank(row['max_rank']) ? row['max_rank'] : null;
-            
-            return row;
-        } catch (e) {
-            console.warn('⚠️ Row validation error:', e, row);
-            return null;
-        }
-    }
-
     // ════════════════════════════════════════════════════════════════════════════
-    // APPLICATION STATE & CONFIG
+    // APP STATE
     // ════════════════════════════════════════════════════════════════════════════
 
     const SPREADSHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQnn0eQbpkOgdDYoN78j2pA1QL2RiSu8GT4FLbaxREwaj9wYMnH3IwYaYaJB31oi8RfPBhJ6ANyl3l1/pub?gid=555666777&single=true&output=csv";
-    const DATA_CACHE_KEY = 'bhu_cutoff_data_v1';
-    const CACHE_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
     let globalData = [];
     let activeCourseType = 'UG';
@@ -545,148 +492,45 @@
     const rowsPerPage = 20;
 
     // ════════════════════════════════════════════════════════════════════════════
-    // CACHE MANAGEMENT
+    // LOAD & PARSE CSV
     // ════════════════════════════════════════════════════════════════════════════
 
-    function loadFromCache() {
-        try {
-            const cached = localStorage.getItem(DATA_CACHE_KEY);
-            if (!cached) return null;
+    Papa.parse(SPREADSHEET_CSV_URL, {
+        download: true,
+        header: true,
+        skipEmptyLines: true,
+        complete: function(results) {
+            console.log('✅ CSV loaded:', results.data.length, 'rows');
             
-            const { data, timestamp } = JSON.parse(cached);
-            const age = Date.now() - timestamp;
-            
-            if (age < CACHE_DURATION_MS) {
-                console.log('✅ Loaded from cache (age:', Math.round(age / 1000 / 60), 'min)');
-                return data;
-            } else {
-                console.log('⏱️ Cache expired');
-                localStorage.removeItem(DATA_CACHE_KEY);
+            // Store data as-is from your sheet
+            globalData = results.data;
+
+            availableYears = [...new Set(globalData.map(i => i['Year']).filter(Boolean))].sort((a,b) => b - a);
+            activeYear = availableYears[0] || '';
+
+            if (globalData.length === 0) {
+                document.getElementById('errorAlert').classList.remove('hidden');
+                document.getElementById('errorMessage').textContent = 'No data found in spreadsheet';
+                document.getElementById('loading').classList.add('hidden');
+                return;
             }
-        } catch (e) {
-            console.warn('⚠️ Cache read failed:', e);
-            localStorage.removeItem(DATA_CACHE_KEY);
+
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('tableContainer').classList.remove('hidden');
+
+            renderYearTabs();
+            updateView();
+        },
+        error: function(error) {
+            console.error('❌ CSV Error:', error);
+            document.getElementById('errorAlert').classList.remove('hidden');
+            document.getElementById('errorMessage').textContent = 'Failed to load CSV: ' + error.message;
+            document.getElementById('loading').classList.add('hidden');
         }
-        return null;
-    }
-
-    function saveToCache(data) {
-        try {
-            localStorage.setItem(DATA_CACHE_KEY, JSON.stringify({
-                data,
-                timestamp: Date.now()
-            }));
-            console.log('💾 Data cached successfully');
-        } catch (e) {
-            console.warn('⚠️ Cache write failed:', e);
-        }
-    }
+    });
 
     // ════════════════════════════════════════════════════════════════════════════
-    // ERROR HANDLING
-    // ════════════════════════════════════════════════════════════════════════════
-
-    function showError(message) {
-        const errorAlert = document.getElementById('errorAlert');
-        const errorMessage = document.getElementById('errorMessage');
-        errorMessage.textContent = message;
-        errorAlert.classList.remove('hidden');
-        document.getElementById('loading').classList.add('hidden');
-        console.error('❌ Error:', message);
-    }
-
-    function hideError() {
-        document.getElementById('errorAlert').classList.add('hidden');
-    }
-
-    // ════════════════════════════════════════════════════════════════════════════
-    // CSV LOADING WITH FALLBACK
-    // ════════════════════════════════════════════════════════════════════════════
-
-    function loadCutoffData() {
-        // Try cache first
-        const cachedData = loadFromCache();
-        if (cachedData && Array.isArray(cachedData) && cachedData.length > 0) {
-            console.log('📦 Using cached data with', cachedData.length, 'records');
-            initializeApp(cachedData);
-            return;
-        }
-
-        // Load from Google Sheets
-        console.log('🔄 Fetching data from Google Sheets...');
-        Papa.parse(SPREADSHEET_CSV_URL, {
-            download: true,
-            header: true,
-            skipEmptyLines: true,
-            dynamicTyping: false,
-            complete: function(results) {
-                console.log('📊 CSV Parse complete. Raw records:', results.data.length);
-                
-                if (!results.data || results.data.length === 0) {
-                    showError('No data found in spreadsheet. Please check the CSV URL.');
-                    return;
-                }
-
-                // Validate and sanitize all rows
-                const validatedData = results.data
-                    .map(validateAndSanitizeRow)
-                    .filter(row => row !== null);
-
-                console.log(`✅ Valid records after filtering: ${validatedData.length}/${results.data.length}`);
-
-                if (validatedData.length === 0) {
-                    showError('No valid data found after validation. All rows were rejected.');
-                    console.log('First row for debugging:', results.data[0]);
-                    return;
-                }
-
-                console.log(`✅ Loaded ${validatedData.length} valid records from CSV`);
-                saveToCache(validatedData);
-                initializeApp(validatedData);
-            },
-            error: function(error) {
-                console.error('❌ CSV Parse Error:', error);
-                showError(`Failed to load data: ${error.message || 'Unknown error'}. Please refresh the page.`);
-            }
-        });
-    }
-
-    /**
-     * Initializes the app with loaded data
-     */
-    function initializeApp(data) {
-        globalData = data;
-        console.log('🎯 Initializing with', data.length, 'records');
-        
-        availableYears = [...new Set(globalData.map(i => String(i['Year']).trim()))]
-            .filter(y => y)
-            .sort((a, b) => b - a);
-        
-        console.log('📅 Available years:', availableYears);
-
-        if (availableYears.length === 0) {
-            showError('No year data found in spreadsheet.');
-            return;
-        }
-
-        activeYear = availableYears[0];
-
-        hideError();
-        document.getElementById('loading').classList.add('hidden');
-        document.getElementById('tableContainer').classList.remove('hidden');
-
-        renderYearTabs();
-        updateView();
-        
-        console.log('✅ App initialized successfully!');
-    }
-
-    // Start loading data
-    console.log('🚀 BHU Cutoff Explorer starting...');
-    loadCutoffData();
-
-    // ════════════════════════════════════════════════════════════════════════════
-    // UI RENDERING & INTERACTIONS
+    // UI LOGIC
     // ════════════════════════════════════════════════════════════════════════════
 
     function renderYearTabs() {
@@ -697,7 +541,6 @@
             btn.className = 'year-tab' + (year === activeYear ? ' active' : '');
             btn.textContent = year + ' Cutoffs';
             btn.onclick = () => switchYear(year);
-            btn.setAttribute('aria-label', `View ${year} cutoff data`);
             c.appendChild(btn);
         });
     }
@@ -710,7 +553,6 @@
     }
 
     function switchCourseType(type) {
-        if (type !== 'UG' && type !== 'PG') return;
         activeCourseType = type;
         document.getElementById('btnUG').className = 'toggle-btn' + (type === 'UG' ? ' active' : '');
         document.getElementById('btnPG').className = 'toggle-btn' + (type === 'PG' ? ' active' : '');
@@ -726,23 +568,16 @@
 
     function updateView() {
         const typeData = globalData.filter(row => {
-            const t = String(row['Course Type'] || 'UG').toUpperCase().trim();
-            return t === activeCourseType && String(row['Year']).trim() === activeYear;
+            const t = (row['Course Type'] || 'UG').toUpperCase().trim();
+            return t === activeCourseType && (row['Year'] === activeYear);
         });
-
-        console.log(`📋 Filtered ${typeData.length} records for ${activeCourseType} - ${activeYear}`);
 
         const uniq = key => [...new Set(typeData.map(r => r[key]).filter(Boolean))].sort();
         const populate = (id, vals) => {
             const el = document.getElementById(id);
             const cur = el.value;
             el.innerHTML = '<option value="">All</option>';
-            vals.forEach(v => {
-                const opt = document.createElement('option');
-                opt.value = v;
-                opt.textContent = v;
-                el.appendChild(opt);
-            });
+            vals.forEach(v => el.innerHTML += `<option value="${v}">${escapeHtml(v)}</option>`);
             if (vals.includes(cur)) el.value = cur;
         };
 
@@ -760,8 +595,8 @@
 
     function updateViewFilterOnly() {
         const typeData = globalData.filter(row => {
-            const t = String(row['Course Type'] || 'UG').toUpperCase().trim();
-            return t === activeCourseType && String(row['Year']).trim() === activeYear;
+            const t = (row['Course Type'] || 'UG').toUpperCase().trim();
+            return t === activeCourseType && (row['Year'] === activeYear);
         });
         filterTableData(typeData);
     }
@@ -815,80 +650,42 @@
         const tbody = document.getElementById('tableBody');
         tbody.innerHTML = '';
         if (data.length === 0) {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td colspan="7">
+            tbody.innerHTML = `
+                <tr><td colspan="7">
                     <div class="empty-state">
                         <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                         <p style="font-size:14px;font-weight:600;color:#94a3b8;">No cutoff data found</p>
                         <p style="font-size:13px;color:#cbd5e1;margin-top:4px;">Try adjusting your filters</p>
                     </div>
-                </td>
-            `;
-            tbody.appendChild(tr);
+                </td></tr>`;
             return;
         }
 
         data.forEach(row => {
-            const prog  = row['Program_Name'] || '—';
-            const coll  = row['Faculty/College Name'] || '—';
-            const cat   = row['Allocated Category'] || '—';
-            const round = row['Round'] || '—';
+            const prog  = escapeHtml(row['Program_Name'] || '—');
+            const coll  = escapeHtml(row['Faculty/College Name'] || '—');
+            const cat   = escapeHtml(row['Allocated Category'] || '—');
+            const round = escapeHtml(row['Round'] || '—');
 
-            const minScore = row['Min NTA score'] !== null ? parseFloat(row['Min NTA score']).toFixed(2) : '—';
-            const maxScore = row['max_score'] !== null ? parseFloat(row['max_score']).toFixed(2) : '—';
+            const minR = row['Min NTA score'];
+            const maxR = row['max_score'];
+            const minScore = (!isNaN(parseFloat(minR))) ? parseFloat(minR).toFixed(2) : (minR || '—');
+            const maxScore = (!isNaN(parseFloat(maxR))) ? parseFloat(maxR).toFixed(2) : (maxR || '—');
 
             const minRk = row['min_rank'] || '';
             const maxRk = row['max_rank'] || '';
             const rankStr = (minRk && maxRk) ? `${minRk} – ${maxRk}` : '—';
 
             const tr = document.createElement('tr');
-            
-            // Safe DOM creation
-            const td1 = document.createElement('td');
-            td1.style.fontWeight = '600';
-            td1.style.color = '#1e293b';
-            td1.style.maxWidth = '220px';
-            td1.textContent = prog;
-            
-            const td2 = document.createElement('td');
-            td2.style.color = '#475569';
-            td2.style.fontSize = '12.5px';
-            td2.style.maxWidth = '180px';
-            td2.textContent = coll;
-            
-            const td3 = document.createElement('td');
-            const chip = document.createElement('span');
-            chip.className = `cat-chip ${catClass(cat)}`;
-            chip.textContent = cat;
-            td3.appendChild(chip);
-            
-            const td4 = document.createElement('td');
-            td4.style.color = '#64748b';
-            td4.style.fontWeight = '500';
-            td4.style.fontSize = '13px';
-            td4.textContent = round;
-            
-            const td5 = document.createElement('td');
-            td5.className = 'score-min';
-            td5.textContent = minScore;
-            
-            const td6 = document.createElement('td');
-            td6.className = 'score-max';
-            td6.textContent = maxScore;
-            
-            const td7 = document.createElement('td');
-            td7.className = 'rank-cell';
-            td7.textContent = rankStr;
-            
-            tr.appendChild(td1);
-            tr.appendChild(td2);
-            tr.appendChild(td3);
-            tr.appendChild(td4);
-            tr.appendChild(td5);
-            tr.appendChild(td6);
-            tr.appendChild(td7);
-            
+            tr.innerHTML = `
+                <td style="font-weight:600;color:#1e293b;max-width:220px;">${prog}</td>
+                <td style="color:#475569;font-size:12.5px;max-width:180px;">${coll}</td>
+                <td><span class="cat-chip ${catClass(cat)}">${cat}</span></td>
+                <td style="color:#64748b;font-weight:500;font-size:13px;">${round}</td>
+                <td class="score-min">${minScore}</td>
+                <td class="score-max">${maxScore}</td>
+                <td class="rank-cell">${rankStr}</td>
+            `;
             tbody.appendChild(tr);
         });
     }
