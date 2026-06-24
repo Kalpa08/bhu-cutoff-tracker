@@ -202,8 +202,19 @@
                     row['Min NTA score'] !== 'Cutoff_Score'
                 ); 
 
+
                 globalData.forEach(row => {
+                    // Fallback for missing year
                     if (!row['Year']) row['Year'] = '2025';
+
+                    // AUTO-CLEAN CATEGORIES: Removes typos like ")" and forces uppercase
+                    if (row['Allocated Category']) {
+                        let cleanCat = row['Allocated Category'].trim();
+                        if (cleanCat.startsWith(')')) {
+                            cleanCat = cleanCat.substring(1).trim();
+                        }
+                        row['Allocated Category'] = cleanCat.toUpperCase();
+                    }
                 });
 
                 availableYears = [...new Set(globalData.map(item => item['Year'].trim()))].sort((a, b) => b - a);
