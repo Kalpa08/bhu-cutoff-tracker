@@ -343,13 +343,31 @@
             </div>
             
             <div style="display:flex;align-items:center;gap:12px;">
-                <!-- NEW DOWNLOAD BUTTON -->
+                <!-- DOWNLOAD BUTTON -->
                 <button onclick="downloadCSV()" class="page-btn" style="padding: 5px 12px; font-size: 12px;">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                     Export to CSV
                 </button>
                 <span id="pageInfo" style="font-size:12.5px;color:#64748b;font-weight:500;">Showing 0 entries</span>
             </div>
+        </div>
+
+        <!-- The actual Table that was missing -->
+        <div class="overflow-x-auto">
+            <table class="data-table w-full text-left border-collapse">
+                <thead>
+                    <tr>
+                        <th>Program Name</th>
+                        <th>College / Faculty</th>
+                        <th>Category</th>
+                        <th>Round</th>
+                        <th>Min Score</th>
+                        <th>Max Score</th>
+                        <th>Rank Range</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
         </div>
 
         <!-- Pagination -->
@@ -367,6 +385,7 @@
             </div>
         </div>
     </div>
+    
 
 </main>
 
