@@ -4,17 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BHU Cutoff Explorer</title>
-    
-    <!-- Security: Content Security Policy -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://docs.google.com; img-src 'self' data:; frame-ancestors 'none';">
-    
-    <!-- Security: Additional headers -->
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <meta http-equiv="X-Content-Type-Options" content="nosniff">
-    <meta http-equiv="X-Frame-Options" content="DENY">
-    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
-    <meta name="referrer" content="strict-origin-when-cross-origin">
-    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -243,17 +232,6 @@
         }
         @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
 
-        /* ── ERROR STATE ── */
-        .error-state {
-            background: #fef2f2;
-            border: 1px solid #fecaca;
-            border-radius: 12px;
-            padding: 20px;
-            color: #991b1b;
-            margin: 20px 0;
-        }
-        .error-state strong { color: #7f1d1d; }
-
         /* scroll */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #f1f5f9; }
@@ -305,18 +283,9 @@
     <!-- UG / PG Toggle -->
     <div class="flex justify-center">
         <div class="toggle-wrap">
-            <button id="btnUG" class="toggle-btn active" onclick="switchCourseType('UG')" aria-label="Switch to Undergraduate Admissions">UG Admissions</button>
-            <button id="btnPG" class="toggle-btn" onclick="switchCourseType('PG')" aria-label="Switch to Postgraduate Admissions">PG Admissions</button>
+            <button id="btnUG" class="toggle-btn active" onclick="switchCourseType('UG')">UG Admissions</button>
+            <button id="btnPG" class="toggle-btn" onclick="switchCourseType('PG')">PG Admissions</button>
         </div>
-    </div>
-
-    <!-- Error Alert -->
-    <div id="errorAlert" class="error-state hidden" role="alert">
-        <strong>⚠️ Error Loading Data:</strong>
-        <p id="errorMessage" style="margin-top: 8px;"></p>
-        <button onclick="location.reload()" style="margin-top: 12px; background: #991b1b; color: white; padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600;">
-            Retry
-        </button>
     </div>
 
     <!-- Filters -->
@@ -328,25 +297,25 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5 p-5">
             <div>
                 <div class="filter-label">Program</div>
-                <select id="courseFilter" class="filter-select" aria-label="Filter by Program">
+                <select id="courseFilter" class="filter-select">
                     <option value="">All Programs</option>
                 </select>
             </div>
             <div>
                 <div class="filter-label">College</div>
-                <select id="collegeFilter" class="filter-select" aria-label="Filter by College">
+                <select id="collegeFilter" class="filter-select">
                     <option value="">All Colleges</option>
                 </select>
             </div>
             <div>
                 <div class="filter-label">Category</div>
-                <select id="categoryFilter" class="filter-select" aria-label="Filter by Category">
+                <select id="categoryFilter" class="filter-select">
                     <option value="">All Categories</option>
                 </select>
             </div>
             <div>
                 <div class="filter-label">Round</div>
-                <select id="roundFilter" class="filter-select" aria-label="Filter by Round">
+                <select id="roundFilter" class="filter-select">
                     <option value="">All Rounds</option>
                 </select>
             </div>
@@ -396,11 +365,11 @@
         <div style="padding:14px 20px;border-top:1px solid #f1f5f9;display:flex;align-items:center;justify-between;background:#fafbfc;flex-wrap:wrap;gap:10px;">
             <div style="font-size:12.5px;color:#64748b;"></div>
             <div style="display:flex;gap:8px;">
-                <button id="btnPrev" class="page-btn" onclick="changePage(-1)" aria-label="Previous page">
+                <button id="btnPrev" class="page-btn" onclick="changePage(-1)">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
                     Previous
                 </button>
-                <button id="btnNext" class="page-btn" onclick="changePage(1)" aria-label="Next page">
+                <button id="btnNext" class="page-btn" onclick="changePage(1)">
                     Next
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
                 </button>
@@ -418,11 +387,11 @@
             <div>
                 <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;margin-bottom:14px;">Official BHU Links</p>
                 <div class="space-y-3">
-                    <a href="https://admission.bhu.ac.in/en" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 group" style="font-size:14px;font-weight:500;color:#1e293b;text-decoration:none;">
+                    <a href="https://admission.bhu.ac.in/en" target="_blank" class="flex items-center gap-2 group" style="font-size:14px;font-weight:500;color:#1e293b;text-decoration:none;">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9B1C1C" stroke-width="2" stroke-linecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
                         Admission Portal & Application Links (2026)
                     </a>
-                    <a href="https://bhu.ac.in/" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2" style="font-size:14px;font-weight:500;color:#1e293b;text-decoration:none;">
+                    <a href="https://bhu.ac.in/" target="_blank" class="flex items-center gap-2" style="font-size:14px;font-weight:500;color:#1e293b;text-decoration:none;">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9B1C1C" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
                         BHU Official Website
                     </a>
@@ -432,11 +401,11 @@
             <div>
                 <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;margin-bottom:14px;">Students' Society of Assam, BHU</p>
                 <div class="space-y-3">
-                    <a href="https://ssabhu.netlify.app/" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2" style="font-size:14px;font-weight:500;color:#1e293b;text-decoration:none;">
+                    <a href="https://ssabhu.netlify.app/" target="_blank" class="flex items-center gap-2" style="font-size:14px;font-weight:500;color:#1e293b;text-decoration:none;">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9B1C1C" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
                         Official SSA Website
                     </a>
-                    <a href="https://www.instagram.com/ssa__bhu/" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2" style="font-size:14px;font-weight:500;color:#1e293b;text-decoration:none;">
+                    <a href="https://www.instagram.com/ssa__bhu/" target="_blank" class="flex items-center gap-2" style="font-size:14px;font-weight:500;color:#1e293b;text-decoration:none;">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="#9B1C1C"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.204-.012 3.584-.07 4.85-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.058 1.28-.072 1.688-.072 4.947 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.28.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zM5.838 12a6.162 6.162 0 1 1 12.324 0 6.162 6.162 0 0 1-12.324 0zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm4.965-10.322a1.44 1.44 0 1 1 2.881.001 1.44 1.44 0 0 1-2.881-.001Z"></path></svg>
                         @ssa__bhu on Instagram
                     </a>
@@ -448,7 +417,7 @@
 
         <div style="margin-top:32px;padding-top:20px;border-top:1px solid #f1f5f9;text-align:center;font-size:12.5px;color:#94a3b8;font-weight:400;line-height:1.6;">
             © 2026 Students' Society of Assam, Banaras Hindu University — built for the student community.<br>
-            <span style="opacity: 0.85;">Designed & Developed by <a href="https://dkalpa.pages.dev/" target="_blank" rel="noopener noreferrer" style="font-weight:600; color:#475569; text-decoration:none; transition: color 0.2s;">Kalpa Devi</a></span>
+            <span style="opacity: 0.85;">Designed & Developed by <a href="https://dkalpa.pages.dev/" target="_blank" style="font-weight:600; color:#475569; text-decoration:none; transition: color 0.2s;">Kalpa Devi</a></span>
         </div>
 
         
@@ -456,31 +425,6 @@
 </footer>
 
 <script>
-    // ════════════════════════════════════════════════════════════════════════════
-    // SECURITY: Only XSS protection (HTML escaping)
-    // ════════════════════════════════════════════════════════════════════════════
-    
-    /**
-     * Escapes HTML special characters to prevent XSS attacks
-     * This is ONLY protection against external attacks via rendered HTML
-     */
-    function escapeHtml(text) {
-        if (typeof text !== 'string') return String(text || '');
-        const map = {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#39;',
-            '/': '&#x2F;'
-        };
-        return text.replace(/[&<>"'\/]/g, char => map[char]);
-    }
-
-    // ════════════════════════════════════════════════════════════════════════════
-    // APP STATE
-    // ════════════════════════════════════════════════════════════════════════════
-
     const SPREADSHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQnn0eQbpkOgdDYoN78j2pA1QL2RiSu8GT4FLbaxREwaj9wYMnH3IwYaYaJB31oi8RfPBhJ6ANyl3l1/pub?gid=555666777&single=true&output=csv";
 
     let globalData = [];
@@ -491,47 +435,35 @@
     let currentPage = 1;
     const rowsPerPage = 20;
 
-    // ════════════════════════════════════════════════════════════════════════════
-    // LOAD & PARSE CSV
-    // ════════════════════════════════════════════════════════════════════════════
-
     Papa.parse(SPREADSHEET_CSV_URL, {
         download: true,
         header: true,
-        skipEmptyLines: true,
         complete: function(results) {
-            console.log('✅ CSV loaded:', results.data.length, 'rows');
-            
-            // Store data as-is from your sheet
-            globalData = results.data;
+            globalData = results.data.filter(row =>
+                row['Program_Name'] &&
+                row['Program_Name'] !== 'Program_Name' &&
+                row['Min NTA score'] !== 'Cutoff_Score'
+            );
 
-            availableYears = [...new Set(globalData.map(i => i['Year']).filter(Boolean))].sort((a,b) => b - a);
-            activeYear = availableYears[0] || '';
+            globalData.forEach(row => {
+                if (!row['Year']) row['Year'] = '2025';
+                if (row['Allocated Category']) {
+                    let c = row['Allocated Category'].trim();
+                    if (c.startsWith(')')) c = c.substring(1).trim();
+                    row['Allocated Category'] = c.toUpperCase();
+                }
+            });
 
-            if (globalData.length === 0) {
-                document.getElementById('errorAlert').classList.remove('hidden');
-                document.getElementById('errorMessage').textContent = 'No data found in spreadsheet';
-                document.getElementById('loading').classList.add('hidden');
-                return;
-            }
+            availableYears = [...new Set(globalData.map(i => i['Year'].trim()))].sort((a,b) => b - a);
+            activeYear = availableYears[0];
 
             document.getElementById('loading').classList.add('hidden');
             document.getElementById('tableContainer').classList.remove('hidden');
 
             renderYearTabs();
             updateView();
-        },
-        error: function(error) {
-            console.error('❌ CSV Error:', error);
-            document.getElementById('errorAlert').classList.remove('hidden');
-            document.getElementById('errorMessage').textContent = 'Failed to load CSV: ' + error.message;
-            document.getElementById('loading').classList.add('hidden');
         }
     });
-
-    // ════════════════════════════════════════════════════════════════════════════
-    // UI LOGIC
-    // ════════════════════════════════════════════════════════════════════════════
 
     function renderYearTabs() {
         const c = document.getElementById('yearTabsContainer');
@@ -569,7 +501,7 @@
     function updateView() {
         const typeData = globalData.filter(row => {
             const t = (row['Course Type'] || 'UG').toUpperCase().trim();
-            return t === activeCourseType && (row['Year'] === activeYear);
+            return t === activeCourseType && row['Year'].trim() === activeYear;
         });
 
         const uniq = key => [...new Set(typeData.map(r => r[key]).filter(Boolean))].sort();
@@ -577,7 +509,7 @@
             const el = document.getElementById(id);
             const cur = el.value;
             el.innerHTML = '<option value="">All</option>';
-            vals.forEach(v => el.innerHTML += `<option value="${v}">${escapeHtml(v)}</option>`);
+            vals.forEach(v => el.innerHTML += `<option value="${v}">${v}</option>`);
             if (vals.includes(cur)) el.value = cur;
         };
 
@@ -596,7 +528,7 @@
     function updateViewFilterOnly() {
         const typeData = globalData.filter(row => {
             const t = (row['Course Type'] || 'UG').toUpperCase().trim();
-            return t === activeCourseType && (row['Year'] === activeYear);
+            return t === activeCourseType && row['Year'].trim() === activeYear;
         });
         filterTableData(typeData);
     }
@@ -633,7 +565,7 @@
         if (total === 0) {
             info.textContent = 'No results';
         } else {
-            info.textContent = `Showing ${start + 1}–${Math.min(end, total)} of ${total} entries`;
+            info.innerHTML = `Showing <b>${start + 1}</b>–<b>${Math.min(end, total)}</b> of <b>${total}</b> entries`;
         }
 
         document.getElementById('btnPrev').disabled = currentPage === 1;
@@ -662,10 +594,10 @@
         }
 
         data.forEach(row => {
-            const prog  = escapeHtml(row['Program_Name'] || '—');
-            const coll  = escapeHtml(row['Faculty/College Name'] || '—');
-            const cat   = escapeHtml(row['Allocated Category'] || '—');
-            const round = escapeHtml(row['Round'] || '—');
+            const prog  = row['Program_Name'] || '—';
+            const coll  = row['Faculty/College Name'] || '—';
+            const cat   = row['Allocated Category'] || '—';
+            const round = row['Round'] || '—';
 
             const minR = row['Min NTA score'];
             const maxR = row['max_score'];
