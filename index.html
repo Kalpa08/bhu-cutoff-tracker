@@ -161,21 +161,30 @@
         }
 
 
-        /* Suggestion Box Styling */
-        .suggestions-box {
+        /* Update the existing .suggestions-box class */
+    .suggestions-box {
         position: absolute;
-        top: 100%; left: 0; right: 0;
+        top: calc(100% + 4px); /* Slight gap below the input */
+        left: 0;
+        right: 0;
+        width: 100%; /* Ensures it fills the input width */
         background: white;
         border: 1px solid #e2e8f0;
         border-radius: 8px;
-        z-index: 999;
-        max-height: 200px;
+        z-index: 9999; /* Higher z-index to ensure it sits on top */
+        max-height: 300px; /* Increased height for desktop */
         overflow-y: auto;
         box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-        margin-top: 4px;
-        }
-        .suggestion-item { padding: 12px; cursor: pointer; font-size: 14px; border-bottom: 1px solid #f1f5f9; }
-        .suggestion-item:hover { background: #fdf8f8; color: #9B1C1C; }
+    }
+
+    .suggestion-item { 
+        padding: 12px 16px; 
+        cursor: pointer; 
+        font-size: 14px; 
+        border-bottom: 1px solid #f1f5f9; 
+        white-space: normal; /* Ensures text wraps if it's long */
+    }
+    .suggestion-item:hover { background: #fdf8f8; color: #9B1C1C; }
         
     </style>
 </head>
