@@ -291,12 +291,21 @@
         </div>
     </div>
 
-    <!-- Filters -->
+<!-- Filters -->
     <div class="filter-card">
         <div class="filter-card-header">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9B1C1C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
             <span style="font-size:12px; font-weight:700; color:#374151; text-transform:uppercase; letter-spacing:0.06em;">Filter Results</span>
         </div>
+
+        <!-- NEW SMART SEARCH BAR -->
+        <div style="padding: 16px 20px 0 20px;">
+            <div style="position: relative;">
+                <svg style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #94a3b8;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" id="globalSearch" placeholder="Search for a program (e.g., Chemistry) or college..." style="width: 100%; padding: 10px 14px 10px 38px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 13.5px; outline: none; transition: all 0.2s; color: #1e293b;" onfocus="this.style.borderColor='#9B1C1C'; this.style.boxShadow='0 0 0 3px rgba(155,28,28,0.1)';" onblur="this.style.borderColor='#e2e8f0'; this.style.boxShadow='none';">
+            </div>
+        </div>
+
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5 p-5">
             <div>
                 <div class="filter-label">Program</div>
