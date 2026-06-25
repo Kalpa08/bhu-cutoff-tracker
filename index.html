@@ -533,34 +533,14 @@
         ['courseFilter','collegeFilter','categoryFilter','roundFilter'].forEach(id => {
             document.getElementById(id).value = "";
         });
+        document.getElementById('globalSearch').value = ""; // Clears the search bar when switching tabs
     }
 
-    function updateView() {
-        const typeData = globalData.filter(row => {
-            const t = (row['Course Type'] || 'UG').toUpperCase().trim();
-            return t === activeCourseType && row['Year'].trim() === activeYear;
-        });
-
-        const uniq = key => [...new Set(typeData.map(r => r[key]).filter(Boolean))].sort();
-        const populate = (id, vals) => {
-            const el = document.getElementById(id);
-            const cur = el.value;
-            el.innerHTML = '<option value="">All</option>';
-            vals.forEach(v => el.innerHTML += `<option value="${v}">${v}</option>`);
-            if (vals.includes(cur)) el.value = cur;
-        };
-
-        populate('courseFilter',   uniq('Program_Name'));
-        populate('collegeFilter',  uniq('Faculty/College Name'));
-        populate('categoryFilter', uniq('Allocated Category'));
-        populate('roundFilter',    uniq('Round'));
-
-        filterTableData(typeData);
-    }
-
+    // Listens to dropdowns AND the new search bar
     ['courseFilter','collegeFilter','categoryFilter','roundFilter'].forEach(id => {
         document.getElementById(id).addEventListener('change', updateViewFilterOnly);
     });
+    document.getElementById('globalSearch').addEventListener('input', updateViewFilterOnly);
 
     function updateViewFilterOnly() {
         const typeData = globalData.filter(row => {
@@ -572,12 +552,28 @@
 
     function filterTableData(base) {
         const v = id => document.getElementById(id).value;
-        currentFilteredData = base.filter(row =>
-            (!v('courseFilter')   || row['Program_Name'] === v('courseFilter')) &&
-            (!v('collegeFilter')  || row['Faculty/College Name'] === v('collegeFilter')) &&
-            (!v('categoryFilter') || row['Allocated Category'] === v('categoryFilter')) &&
-            (!v('roundFilter')    || row['Round'] === v('roundFilter'))
-        );
+        const searchTerm = document.getElementById('globalSearch') ? document.getElementById('globalSearch').value.toLowerCase().trim() : '';
+
+        currentFilteredData = base.filter(row => {
+            // Check if search term exists in Program or College
+            const prog = (row['Program_Name'] || '').toLowerCase();
+            const coll = (row['Faculty/College Name'] || '').toLowerCase();
+            const matchesSearch = searchTerm === '' || prog.includes(searchTerm) || coll.includes(searchTerm);
+
+            return matchesSearch &&
+                (!v('courseFilter')   || row['Program_Name'] === v('courseFilter')) &&
+                (!v('collegeFilter')  || row['Faculty/College Name'] === v('collegeFilter')) &&
+                (!v('categoryFilter') || row['Allocated Category'] === v('categoryFilter')) &&
+                (!v('roundFilter')    || row['Round'] === v('roundFilter'));
+        });
+
+        // ══════ FORCE A-Z ALPHABETICAL SORTING ══════
+        currentFilteredData.sort((a, b) => {
+            const nameA = (a['Program_Name'] || '').toLowerCase();
+            const nameB = (b['Program_Name'] || '').toLowerCase();
+            return nameA.localeCompare(nameB);
+        });
+
         currentPage = 1;
         displayCurrentPage();
     }
