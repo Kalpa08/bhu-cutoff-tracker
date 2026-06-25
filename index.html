@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BHU Cutoff Explorer 2025</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+
+        /* ── HEADER ── */
+        .site-header {
+            background: linear-gradient(135deg, #0c1330 0%, #1a1f4e 50%, #0c1330 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        .site-header::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image:
+                repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,255,255,0.03) 40px),
+                repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,0.03) 40px);
+        }
+        .site-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #9B1C1C, #F59E0B, #9B1C1C);
+        }
+
+        .logo-badge {
+            background: rgba(255,255,255,0.08);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 16px;
+            padding: 10px;
+            transition: background 0.2s;
+        }
+        
+        .year-tab {
+            padding: 6px 18px;
+            border-radius: 9999px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #64748b;
+            border: none;
+            background: transparent;
+        }
+        .year-tab.active {
+            background: #9B1C1C;
+            color: white;
+            box-shadow: 0 2px 8px rgba(155,28,28,0.35);
+        }
+
+        .toggle-wrap {
+            background: #f1f5f9;
+            border-radius: 10px;
+            padding: 4px;
+            display: inline-flex;
+            border: 1px solid #e2e8f0;
+        }
+        .toggle-btn {
+            padding: 8px 28px;
+            border-radius: 7px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            background: transparent;
+            color: #64748b;
+        }
+        .toggle-btn.active {
+            background: white;
+            color: #9B1C1C;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.12), 0 0 0 1px rgba(155,28,28,0.15);
+        }
+
+        .data-table thead th {
+            background: #f8fafc;
+            color: #475569;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            padding: 13px 16px;
+            border-bottom: 2px solid #e2e8f0;
+            white-space: nowrap;
+        }
+        .data-table td {
+            padding: 13px 16px;
+            font-size: 13.5px;
+            color: #334155;
+            vertical-align: middle;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .cat-chip {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 9999px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+        .cat-chip.OBC { background: #fef3c7; color: #92400e; }
+        .cat-chip.SC  { background: #f0fdf4; color: #166534; }
+        .cat-chip.ST  { background: #fdf4ff; color: #6b21a8; }
+        .cat-chip.EWS { background: #ecfdf5; color: #065f46; }
+        .cat-chip.UR, .cat-chip.GENERAL { background: #e0e7ff; color: #3730a3; }
+        
+        .page-btn {
+            display: flex; align-items: center; gap: 6px;
+            padding: 7px 16px;
+            border-radius: 8px;
+            border: 1.5px solid #e2e8f0;
+            background: white;
+            font-size: 13px;
+            font-weight: 600;
+            color: #374151;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .page-btn:hover:not(:disabled) { border-color: #9B1C1C; color: #9B1C1C; background: #fdf8f8; }
+        .page-btn:disabled { opacity: 0.38; cursor: not-allowed; }
+
+        .shimmer {
+            height: 14px; border-radius: 6px; background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.4s infinite;
+        }
+        @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+        @media (max-width: 768px) {
+            .data-table thead { display: none; } 
+            .data-table tbody tr {
+                display: block; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 16px; padding: 12px; background: white;
+            }
+            .data-table td {
+                display: flex; justify-content: space-between; align-items: center; padding: 8px 4px; border-bottom: 1px dashed #e2e8f0; text-align: right;
+            }
+            .data-table td:last-child { border-bottom: none; }
+            .data-table td::before {
+                content: attr(data-label); font-weight: 700; font-size: 11px; text-transform: uppercase; color: #64748b; text-align: left; margin-right: 16px;
+            }
+            .data-table td:first-child {
+                display: block; text-align: left; font-size: 15px; color: #9B1C1C; border-bottom: 2px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 4px;
+            }
+            .data-table td:first-child::before { display: none; }
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-50">
+
+<header class="site-header">
+    <div class="max-w-6xl mx-auto px-4 py-7 relative z-10">
+        <div class="flex items-center justify-between gap-4">
+            <div class="logo-badge flex-shrink-0">
+                <img src="bhu-logo.png" alt="BHU Logo" class="h-14 w-auto object-contain">
+            </div>
+            <div class="text-center flex-1">
+                <p class="inline-flex items-center gap-1.5 bg-white/10 border border-white/15 rounded-full px-3 py-1 text-xs font-medium text-white/80 mb-3 mx-auto">
+                    <span class="w-1.5 h-1.5 rounded-full bg-yellow-500"></span>
+                    Students' Society of Assam, BHU
+                </p>
+                <h1 class="text-2xl md:text-4xl font-extrabold text-white tracking-tight leading-tight">
+                    BHU Cutoff Explorer
+                </h1>
+                <p class="text-white/60 text-sm mt-2">Official admissions data · All rounds · All colleges</p>
+            </div>
+            <div class="logo-badge flex-shrink-0">
+                <img src="ssa-logo.png" alt="SSA BHU Logo" class="h-14 w-auto object-contain rounded-full">
+            </div>
+        </div>
+    </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-4 py-8 space-y-8">
+
+    <div class="flex flex-col items-center gap-6">
+        <div id="yearTabsContainer" class="flex gap-2 flex-wrap justify-center"></div>
+        <div class="toggle-wrap">
+            <button id="btnUG" class="toggle-btn active" onclick="switchCourseType('UG')">UG Admissions</button>
+            <button id="btnPG" class="toggle-btn" onclick="switchCourseType('PG')">PG Admissions</button>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        
+        <div class="p-5 border-b border-gray-100 bg-gray-50/50">
+            <div class="flex items-center gap-2 mb-4">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9B1C1C" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <h2 class="text-sm font-bold text-gray-700 uppercase tracking-wider">Search Database</h2>
+            </div>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1.5">Program</label>
+                    <select id="courseFilter" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm bg-white focus:ring-2 focus:ring-red-500 outline-none"><option value="">All Programs</option></select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1.5">College</label>
+                    <select id="collegeFilter" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm bg-white focus:ring-2 focus:ring-red-500 outline-none"><option value="">All Colleges</option></select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1.5">Category</label>
+                    <select id="categoryFilter" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm bg-white focus:ring-2 focus:ring-red-500 outline-none"><option value="">All Categories</option></select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1.5">Round</label>
+                    <select id="roundFilter" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm bg-white focus:ring-2 focus:ring-red-500 outline-none"><option value="">All Rounds</option></select>
+                </div>
+            </div>
+        </div>
+
+        <div id="loading" class="py-16 text-center">
+            <div class="max-w-md mx-auto space-y-3">
+                <p class="text-gray-500 text-sm font-medium mb-4">Loading cutoff data...</p>
+                <div class="shimmer w-full"></div>
+                <div class="shimmer w-4/5"></div>
+                <div class="shimmer w-11/12"></div>
+            </div>
+        </div>
+
+        <div id="explorerTableWrap" class="hidden">
+            <div class="flex justify-between items-center p-4 bg-white border-b border-gray-100 flex-wrap gap-4">
+                <span id="pageInfo" class="text-xs font-semibold text-gray-500 bg-gray-100 px-3 py-1.5 rounded-md">Showing 0 entries</span>
+                <div class="flex gap-2">
+                    <button onclick="downloadCSV()" class="page-btn !py-1.5 !px-3 !text-xs text-gray-600"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> CSV</button>
+                    <button onclick="downloadPDF()" class="page-btn !py-1.5 !px-3 !text-xs text-red-700 border-red-200"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M9 15v-6h3.5a2 2 0 1 1 0 4H9"></path></svg> PDF</button>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="data-table w-full text-left border-collapse">
+                    <thead>
+                        <tr>
+                            <th>Program Name</th>
+                            <th>College / Faculty</th>
+                            <th>Category</th>
+                            <th>Round</th>
+                            <th>Min Score</th>
+                            <th>Max Score</th>
+                            <th>Rank Range</th>
+                        </tr>
+                    </thead>
+                    <tbody id="explorerTableBody"></tbody>
+                </table>
+            </div>
+
+            <div class="p-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-2">
+                <button id="btnPrev" class="page-btn" onclick="changePage(-1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg> Previous</button>
+                <button id="btnNext" class="page-btn" onclick="changePage(1)">Next <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white p-6 md:p-8 rounded-xl shadow-lg border-t-4 border-yellow-500 mt-12">
+        <div class="mb-6 border-b border-gray-100 pb-4">
+            <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#EAB308" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                Admission Predictor
+            </h2>
+            <p class="text-sm text-gray-500 mt-1">Want to know your chances? Enter your NTA score below to see how you stack up against historical cutoffs.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+                <label class="block text-xs font-bold text-gray-600 uppercase mb-2">1. Select Program</label>
+                <select id="predProgram" class="w-full border border-gray-300 rounded-lg p-3 bg-gray-50 text-sm outline-none focus:ring-2 focus:ring-yellow-500 cursor-pointer"><option value="">Choose a program...</option></select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-600 uppercase mb-2">2. Category</label>
+                <select id="predCategory" class="w-full border border-gray-300 rounded-lg p-3 bg-gray-50 text-sm outline-none focus:ring-2 focus:ring-yellow-500 cursor-pointer">
+                    <option value="">Select Category...</option>
+                    <option value="GENERAL">General / UR</option>
+                    <option value="OBC">OBC</option>
+                    <option value="EWS">EWS</option>
+                    <option value="SC">SC</option>
+                    <option value="ST">ST</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-600 uppercase mb-2">3. Your NTA Score</label>
+                <input type="number" id="predScore" placeholder="e.g. 185" class="w-full border border-gray-300 rounded-lg p-3 bg-gray-50 text-sm outline-none focus:ring-2 focus:ring-yellow-500">
+            </div>
+        </div>
+
+        <div class="mt-8 text-center">
+            <button onclick="runPredictor()" class="bg-gray-900 hover:bg-black text-white font-bold py-3 px-8 rounded-full shadow-md transition-all w-full md:w-auto">
+                Check My Chances
+            </button>
+        </div>
+
+        <div id="predictorResultsWrap" class="hidden mt-8 border-t border-gray-100 pt-6">
+            <h3 class="text-sm font-bold text-gray-700 uppercase tracking-wider mb-4">Your Match Results</h3>
+            <div class="overflow-x-auto rounded-lg border border-gray-200">
+                <table class="data-table w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50">
+                            <th>College / Faculty</th>
+                            <th>Category Match</th>
+                            <th>Min Required</th>
+                            <th>Your Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="predictorTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</main>
+
+<footer class="bg-white border-t border-gray-200 mt-16 py-12">
+    <div class="max-w-6xl mx-auto px-4 text-center text-sm text-gray-500">
+        <p class="mb-2">© 2026 Students' Society of Assam, Banaras Hindu University.</p>
+        <p>Built for the student community by <a href="https://dkalpa.pages.dev/" target="_blank" class="font-bold text-gray-700 hover:text-red-700">Kalpa Dihingia</a></p>
+    </div>
+</footer>
+
+<script>
+    const SPREADSHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQnn0eQbpkOgdDYoN78j2pA1QL2RiSu8GT4FLbaxREwaj9wYMnH3IwYaYaJB31oi8RfPBhJ6ANyl3l1/pub?gid=555666777&single=true&output=csv";
+
+    let globalData = [];
+    let activeCourseType = 'UG';
+    let activeYear = '';
+    let availableYears = [];
+    
+    // Explorer State
+    let currentExplorerData = [];
+    let currentPage = 1;
+    const rowsPerPage = 20;
+
+    // Load Data
+    Papa.parse(SPREADSHEET_CSV_URL, {
+        download: true,
+        header: true,
+        complete: function(results) {
+            globalData = results.data.filter(row => row['Program_Name'] && row['Program_Name'] !== 'Program_Name');
+            globalData.forEach(row => {
+                if (!row['Year']) row['Year'] = '2025';
+                if (row['Allocated Category']) {
+                    let c = row['Allocated Category'].trim();
+                    if (c.startsWith(')')) c = c.substring(1).trim();
+                    row['Allocated Category'] = c.toUpperCase();
+                }
+            });
+
+            availableYears = [...new Set(globalData.map(i => i['Year'].trim()))].sort((a,b) => b - a);
+            activeYear = availableYears[0];
+
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('explorerTableWrap').classList.remove('hidden');
+
+            renderYearTabs();
+            updateAllViews();
+        }
+    });
+
+    // Toggle UI
+    function renderYearTabs() {
+        const c = document.getElementById('yearTabsContainer');
+        c.innerHTML = '';
+        availableYears.forEach(year => {
+            const btn = document.createElement('button');
+            btn.className = 'year-tab' + (year === activeYear ? ' active' : '');
+            btn.textContent = year + ' Cutoffs';
+            btn.onclick = () => { activeYear = year; renderYearTabs(); updateAllViews(); };
+            c.appendChild(btn);
+        });
+    }
+
+    function switchCourseType(type) {
+        activeCourseType = type;
+        document.getElementById('btnUG').className = 'toggle-btn' + (type === 'UG' ? ' active' : '');
+        document.getElementById('btnPG').className = 'toggle-btn' + (type === 'PG' ? ' active' : '');
+        updateAllViews();
+    }
+
+    // ════════════ EXPLORER LOGIC ════════════
+    function updateAllViews() {
+        const typeData = globalData.filter(row => (row['Course Type'] || 'UG').toUpperCase().trim() === activeCourseType && row['Year'].trim() === activeYear);
+
+        const uniq = key => [...new Set(typeData.map(r => r[key]).filter(Boolean))].sort();
+        const populate = (id, vals) => {
+            const el = document.getElementById(id);
+            if(!el) return;
+            const cur = el.value;
+            el.innerHTML = id === 'predProgram' ? '<option value="">Choose a program...</option>' : '<option value="">All</option>';
+            vals.forEach(v => el.innerHTML += `<option value="${v}">${v}</option>`);
+            if (vals.includes(cur)) el.value = cur;
+        };
+
+        // Populate Explorer
+        populate('courseFilter', uniq('Program_Name'));
+        populate('collegeFilter', uniq('Faculty/College Name'));
+        populate('categoryFilter', uniq('Allocated Category'));
+        populate('roundFilter', uniq('Round'));
+        
+        // Populate Predictor
+        populate('predProgram', uniq('Program_Name'));
+
+        // Reset and draw Explorer
+        ['courseFilter','collegeFilter','categoryFilter','roundFilter'].forEach(id => document.getElementById(id).value = "");
+        filterExplorerTable();
+        
+        // Hide Predictor Results on tab switch
+        document.getElementById('predictorResultsWrap').classList.add('hidden');
+    }
+
+    ['courseFilter','collegeFilter','categoryFilter','roundFilter'].forEach(id => {
+        document.getElementById(id).addEventListener('change', filterExplorerTable);
+    });
+
+    function filterExplorerTable() {
+        const typeData = globalData.filter(row => (row['Course Type'] || 'UG').toUpperCase().trim() === activeCourseType && row['Year'].trim() === activeYear);
+        const v = id => document.getElementById(id).value;
+        
+        currentExplorerData = typeData.filter(row => 
+            (!v('courseFilter')   || row['Program_Name'] === v('courseFilter')) &&
+            (!v('collegeFilter')  || row['Faculty/College Name'] === v('collegeFilter')) &&
+            (!v('categoryFilter') || row['Allocated Category'] === v('categoryFilter')) &&
+            (!v('roundFilter')    || row['Round'] === v('roundFilter'))
+        );
+
+        currentPage = 1;
+        displayExplorerPage();
+    }
+
+    function changePage(dir) {
+        currentPage += dir;
+        displayExplorerPage();
+    }
+
+    function displayExplorerPage() {
+        const total = currentExplorerData.length;
+        const pages = Math.ceil(total / rowsPerPage) || 1;
+        if (currentPage < 1) currentPage = 1;
+        if (currentPage > pages) currentPage = pages;
+
+        const start = (currentPage - 1) * rowsPerPage;
+        const end   = start + rowsPerPage;
+        renderExplorerTable(currentExplorerData.slice(start, end));
+
+        const info = document.getElementById('pageInfo');
+        info.innerHTML = total === 0 ? 'No results' : `Showing <b>${start + 1}</b>–<b>${Math.min(end, total)}</b> of <b>${total}</b>`;
+
+        document.getElementById('btnPrev').disabled = currentPage === 1;
+        document.getElementById('btnNext').disabled = currentPage === pages;
+    }
+
+    function renderExplorerTable(data) {
+        const tbody = document.getElementById('explorerTableBody');
+        tbody.innerHTML = '';
+        if (data.length === 0) { tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-gray-500">No data found.</td></tr>`; return; }
+
+        data.forEach(row => {
+            const min = parseFloat(row['Min NTA score']);
+            const max = parseFloat(row['max_score']);
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-red-50/30";
+            tr.innerHTML = `
+                <td data-label="Program" class="font-medium text-gray-900 max-w-xs truncate" title="${row['Program_Name']}">${row['Program_Name'] || '—'}</td>
+                <td data-label="College" class="text-xs text-gray-600">${row['Faculty/College Name'] || '—'}</td>
+                <td data-label="Category"><span class="cat-chip ${catClass(row['Allocated Category'])}">${row['Allocated Category'] || '—'}</span></td>
+                <td data-label="Round" class="text-xs font-medium text-gray-500">${row['Round'] || '—'}</td>
+                <td data-label="Min Score" class="font-bold text-red-700">${!isNaN(min) ? min.toFixed(2) : '—'}</td>
+                <td data-label="Max Score" class="font-semibold text-gray-600">${!isNaN(max) ? max.toFixed(2) : '—'}</td>
+                <td data-label="Rank Range" class="text-xs text-gray-500">${(row['min_rank'] && row['max_rank']) ? `${row['min_rank']} – ${row['max_rank']}` : '—'}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function catClass(cat) {
+        if(!cat) return '';
+        const map = { OBC:'OBC', SC:'SC', ST:'ST', EWS:'EWS', UR:'UR', GENERAL:'GENERAL' };
+        for (const k in map) { if (cat.includes(k)) return map[k]; } return '';
+    }
+
+    // ════════════ PREDICTOR LOGIC ════════════
+    function runPredictor() {
+        const program = document.getElementById('predProgram').value;
+        const category = document.getElementById('predCategory').value;
+        const userScoreRaw = document.getElementById('predScore').value;
+        
+        if(!program || !category || !userScoreRaw) { alert("Please fill all 3 fields to check your chances."); return; }
+        const userScore = parseFloat(userScoreRaw);
+        
+        const typeData = globalData.filter(row => (row['Course Type'] || 'UG').toUpperCase().trim() === activeCourseType && row['Year'].trim() === activeYear);
+
+        let predData = typeData.filter(row => {
+            if (row['Program_Name'] !== program) return false;
+            const rowCat = (row['Allocated Category'] || '').toUpperCase().trim();
+            const catMap = category === 'GENERAL' ? 'UR' : category;
+            return rowCat === category || rowCat === 'GENERAL' || rowCat === 'UR' || rowCat.includes(catMap);
+        });
+
+        const tbody = document.getElementById('predictorTableBody');
+        tbody.innerHTML = '';
+
+        if (predData.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-gray-500">No historical data available for this specific combination.</td></tr>`;
+        } else {
+            // Group by college to find the lowest min score across rounds for that specific college
+            let collMap = {};
+            predData.forEach(row => {
+                const coll = row['Faculty/College Name'];
+                const rawMin = parseFloat(row['Min NTA score']);
+                if(!isNaN(rawMin)) {
+                    if(!collMap[coll] || rawMin < collMap[coll].min) {
+                        collMap[coll] = { min: rawMin, cat: row['Allocated Category'] };
+                    }
+                }
+            });
+
+            // Convert to array and sort easiest to hardest
+            let results = Object.keys(collMap).map(k => ({ coll: k, min: collMap[k].min, cat: collMap[k].cat }));
+            results.sort((a,b) => a.min - b.min);
+
+            results.forEach(res => {
+                let badge = '';
+                if (userScore >= res.min) badge = `<span class="text-green-800 bg-green-100 px-3 py-1 rounded-full text-xs font-bold">🟩 Strong Chance</span>`;
+                else if (userScore >= res.min - 10) badge = `<span class="text-yellow-800 bg-yellow-100 px-3 py-1 rounded-full text-xs font-bold">🟨 Borderline</span>`;
+                else badge = `<span class="text-red-800 bg-red-100 px-3 py-1 rounded-full text-xs font-bold">🟥 Tough</span>`;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td data-label="College" class="p-4 text-sm font-medium text-gray-800">${res.coll}</td>
+                    <td data-label="Matched Cat" class="p-4"><span class="cat-chip ${catClass(res.cat)}">${res.cat}</span></td>
+                    <td data-label="Required" class="p-4 text-sm font-bold text-gray-600">${res.min.toFixed(2)}</td>
+                    <td data-label="Status" class="p-4">${badge}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        const wrap = document.getElementById('predictorResultsWrap');
+        wrap.classList.remove('hidden');
+        wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // ════════════ EXPORTS ════════════
+    function downloadCSV() {
+        if (currentExplorerData.length === 0) return alert("No data to download.");
+        const exportData = currentExplorerData.map(row => ({
+            "Course Type": activeCourseType, "Year": activeYear,
+            "Program Name": row['Program_Name'], "College": row['Faculty/College Name'],
+            "Category": row['Allocated Category'], "Round": row['Round'],
+            "Min Score": row['Min NTA score'], "Max Score": row['max_score']
+        }));
+        const blob = new Blob([Papa.unparse(exportData)], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a"); link.href = URL.createObjectURL(blob);
+        link.download = `BHU_Cutoffs_${activeCourseType}_${activeYear}.csv`;
+        link.click();
+    }
+
+    function downloadPDF() {
+        if (currentExplorerData.length === 0) return alert("No data to download.");
+        const { jsPDF } = window.jspdf; const doc = new jsPDF('l', 'pt', 'a4'); 
+        doc.setFontSize(16); doc.text(`BHU Cutoffs - ${activeCourseType} (${activeYear})`, 40, 40);
+        doc.autoTable({
+            head: [['Program', 'College', 'Category', 'Round', 'Min Score']],
+            body: currentExplorerData.map(r => [r['Program_Name'], r['Faculty/College Name'], r['Allocated Category'], r['Round'], r['Min NTA score']]),
+            startY: 60, theme: 'striped', headStyles: { fillColor: [155, 28, 28] }
+        });
+        doc.save(`BHU_Cutoffs_${activeCourseType}_${activeYear}.pdf`);
+    }
+</script>
+</body>
+</html>
