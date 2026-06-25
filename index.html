@@ -239,6 +239,58 @@
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #f1f5f9; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+        /* ── MOBILE CARD VIEW MAGIC ── */
+        @media (max-width: 768px) {
+            .data-table thead { display: none; } /* Hide the top header row on mobile */
+            
+            .data-table tbody tr {
+                display: block;
+                border: 1px solid #e2e8f0;
+                border-radius: 12px;
+                margin-bottom: 16px;
+                padding: 12px;
+                background: white;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            }
+            
+            .data-table td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 8px 4px;
+                border-bottom: 1px dashed #e2e8f0;
+                text-align: right;
+            }
+            
+            .data-table td:last-child { border-bottom: none; }
+            
+            /* Inject the column names as labels on the left side of the card */
+            .data-table td::before {
+                content: attr(data-label);
+                font-weight: 700;
+                font-size: 11px;
+                text-transform: uppercase;
+                color: #64748b;
+                text-align: left;
+                margin-right: 16px;
+            }
+            
+            /* Make the Program Name stand out at the top of the card */
+            .data-table td:first-child {
+                display: block;
+                text-align: left;
+                font-size: 15px;
+                color: #9B1C1C;
+                border-bottom: 2px solid #f1f5f9;
+                padding-bottom: 12px;
+                margin-bottom: 4px;
+            }
+            .data-table td:first-child::before { display: none; }
+        }
+
+
+        
     </style>
 </head>
 <body class="min-h-screen" style="background:#f1f5f9;">
