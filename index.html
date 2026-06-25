@@ -706,40 +706,34 @@
     }
     
     function downloadPNG() {
-        // Check if the container exists
-        const tableElement = document.getElementById('tableContainer');
+    // 1. Target the correct wrapper that contains your table
+    const tableElement = document.querySelector('.data-table-wrap');
     
-        if (!tableElement) {
-            alert("Table container not found!");
-            return;
-        }
-    
-        // Check if there is data
-        if (currentExplorerData.length === 0) {
-            alert("No data available to capture.");
-            return;
-        }
-
-        // Force the container to be visible during capture if it's hidden
-        const wasHidden = tableElement.classList.contains('hidden');
-        if (wasHidden) tableElement.classList.remove('hidden');
-
-        html2canvas(tableElement, { 
-            scale: 2, 
-            backgroundColor: "#ffffff",
-            logging: true // Set to true to see if it's actually running in the console
-        }).then(canvas => {
-            const link = document.createElement('a');
-            link.download = `BHU_Cutoffs_${activeCourseType}_${activeYear}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-        
-            // Hide it again if it was hidden
-            if (wasHidden) tableElement.classList.add('hidden');
-        }).catch(err => {
-            alert("Error capturing image: " + err);
-        });
+    if (!tableElement) {
+        alert("Could not locate the table to capture.");
+        return;
     }
+
+    if (currentFilteredData.length === 0) {
+        alert("No data available to capture.");
+        return;
+    }
+
+    // 2. Use html2canvas to take a high-res screenshot
+    html2canvas(tableElement, { 
+        scale: 2, 
+        backgroundColor: "#ffffff",
+        logging: false 
+    }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = `BHU_Cutoffs_${activeCourseType}_${activeYear}_Page${currentPage}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    }).catch(err => {
+        console.error("PNG Error:", err);
+        alert("An error occurred while generating the image.");
+    });
+}
     function downloadPDF() {
         if (currentExplorerData.length === 0) return alert("No data to download.");
         const { jsPDF } = window.jspdf; const doc = new jsPDF('l', 'pt', 'a4'); 
