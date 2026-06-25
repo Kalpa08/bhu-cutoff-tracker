@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BHU Cutoff Explorer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+
+        /* ── HEADER ── */
+        .site-header {
+            background: linear-gradient(135deg, #0c1330 0%, #1a1f4e 50%, #0c1330 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        .site-header::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image:
+                repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,255,255,0.03) 40px),
+                repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,0.03) 40px);
+        }
+        .site-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #9B1C1C, #F59E0B, #9B1C1C);
+        }
+
+        /* ── LOGO BADGE ── */
+        .logo-badge {
+            background: rgba(255,255,255,0.08);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 16px;
+            padding: 10px;
+            transition: background 0.2s;
+        }
+        .logo-badge:hover { background: rgba(255,255,255,0.14); }
+
+        /* ── TABS ── */
+        .year-tab {
+            padding: 6px 18px;
+            border-radius: 9999px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #64748b;
+            border: none;
+            background: transparent;
+        }
+        .year-tab:hover { color: #1e293b; background: #f1f5f9; }
+        .year-tab.active {
+            background: #9B1C1C;
+            color: white;
+            box-shadow: 0 2px 8px rgba(155,28,28,0.35);
+        }
+
+        /* ── COURSE TYPE TOGGLE ── */
+        .toggle-wrap {
+            background: #f1f5f9;
+            border-radius: 10px;
+            padding: 4px;
+            display: inline-flex;
+            border: 1px solid #e2e8f0;
+        }
+        .toggle-btn {
+            padding: 8px 28px;
+            border-radius: 7px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            background: transparent;
+            color: #64748b;
+        }
+        .toggle-btn.active {
+            background: white;
+            color: #9B1C1C;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.12), 0 0 0 1px rgba(155,28,28,0.15);
+        }
+
+        /* ── FILTER CARD ── */
+        .filter-card {
+            background: white;
+            border-radius: 14px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.06);
+            border: 1px solid #e8edf4;
+            overflow: hidden;
+        }
+        .filter-card-header {
+            background: #fafbfc;
+            border-bottom: 1px solid #e8edf4;
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .filter-label {
+            font-size: 10.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #94a3b8;
+            margin-bottom: 6px;
+        }
+        .filter-select {
+            width: 100%;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 9px 12px;
+            background: #fafbfc;
+            font-size: 13.5px;
+            font-weight: 500;
+            color: #1e293b;
+            cursor: pointer;
+            transition: border-color 0.15s, box-shadow 0.15s;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            padding-right: 36px;
+        }
+        .filter-select:focus {
+            outline: none;
+            border-color: #9B1C1C;
+            box-shadow: 0 0 0 3px rgba(155,28,28,0.1);
+            background-color: white;
+        }
+
+        /* ── TABLE ── */
+        .data-table-wrap {
+            background: white;
+            border-radius: 14px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.06);
+            border: 1px solid #e8edf4;
+            overflow: hidden;
+        }
+        .data-table thead th {
+            background: #f8fafc;
+            color: #475569;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            padding: 13px 16px;
+            border-bottom: 2px solid #e2e8f0;
+            white-space: nowrap;
+        }
+        .data-table tbody tr {
+            border-bottom: 1px solid #f1f5f9;
+            transition: background 0.12s;
+        }
+        .data-table tbody tr:hover { background: #fdf8f8; }
+        .data-table tbody tr:last-child { border-bottom: none; }
+        .data-table td {
+            padding: 13px 16px;
+            font-size: 13.5px;
+            color: #334155;
+            vertical-align: middle;
+        }
+
+        /* ── CATEGORY CHIP ── */
+        .cat-chip {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 9999px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+        .cat-chip.OBC { background: #fef3c7; color: #92400e; }
+        .cat-chip.SC  { background: #f0fdf4; color: #166534; }
+        .cat-chip.ST  { background: #fdf4ff; color: #6b21a8; }
+        .cat-chip.EWS { background: #ecfdf5; color: #065f46; }
+        .cat-chip.UR, .cat-chip.GENERAL { background: #e0e7ff; color: #3730a3; }
+        .cat-chip.PH, .cat-chip.PWD { background: #fff7ed; color: #9a3412; }
+
+        /* ── SCORE CELL ── */
+        .score-min { font-weight: 700; color: #9B1C1C; font-variant-numeric: tabular-nums; }
+        .score-max { font-weight: 500; color: #475569; font-variant-numeric: tabular-nums; }
+        .rank-cell  { color: #64748b; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+
+        /* ── PAGINATION ── */
+        .page-btn {
+            display: flex; align-items: center; gap: 6px;
+            padding: 7px 16px;
+            border-radius: 8px;
+            border: 1.5px solid #e2e8f0;
+            background: white;
+            font-size: 13px;
+            font-weight: 600;
+            color: #374151;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .page-btn:hover:not(:disabled) { border-color: #9B1C1C; color: #9B1C1C; background: #fdf8f8; }
+        .page-btn:disabled { opacity: 0.38; cursor: not-allowed; }
+
+        /* ── STAT PILLS in header ── */
+        .header-pill {
+            display: inline-flex; align-items: center; gap: 5px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 9999px;
+            padding: 4px 12px;
+            font-size: 12px;
+            font-weight: 500;
+            color: rgba(255,255,255,0.75);
+        }
+        .header-pill .dot { width:6px; height:6px; border-radius:50%; background:#F59E0B; flex-shrink:0; }
+
+        /* ── EMPTY STATE ── */
+        .empty-state { padding: 48px 24px; text-align: center; color: #94a3b8; }
+        .empty-state svg { margin: 0 auto 12px; }
+
+        /* ── LOADING SHIMMER ── */
+        #loading { padding: 64px 0; text-align: center; }
+        .shimmer {
+            height: 14px; border-radius: 6px; background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.4s infinite;
+        }
+        @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+        /* scroll */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+        /* ── MOBILE CARD VIEW MAGIC ── */
+        @media (max-width: 768px) {
+            .data-table thead { display: none; } /* Hide the top header row on mobile */
+            
+            .data-table tbody tr {
+                display: block;
+                border: 1px solid #e2e8f0;
+                border-radius: 12px;
+                margin-bottom: 16px;
+                padding: 12px;
+                background: white;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            }
+            
+            .data-table td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 8px 4px;
+                border-bottom: 1px dashed #e2e8f0;
+                text-align: right;
+            }
+            
+            .data-table td:last-child { border-bottom: none; }
+            
+            /* Inject the column names as labels on the left side of the card */
+            .data-table td::before {
+                content: attr(data-label);
+                font-weight: 700;
+                font-size: 11px;
+                text-transform: uppercase;
+                color: #64748b;
+                text-align: left;
+                margin-right: 16px;
+            }
+            
+            /* Make the Program Name stand out at the top of the card */
+            .data-table td:first-child {
+                display: block;
+                text-align: left;
+                font-size: 15px;
+                color: #9B1C1C;
+                border-bottom: 2px solid #f1f5f9;
+                padding-bottom: 12px;
+                margin-bottom: 4px;
+            }
+            .data-table td:first-child::before { display: none; }
+        }
+
+
+        
+    </style>
+</head>
+<body class="min-h-screen" style="background:#f1f5f9;">
+
+<!-- ══════════════════════════════════════ HEADER ══════════════════════════════════════ -->
+<header class="site-header">
+    <div class="max-w-6xl mx-auto px-4 py-7 relative z-10">
+        <div class="flex items-center justify-between gap-4">
+
+            <!-- BHU Logo -->
+            <div class="logo-badge flex-shrink-0">
+                <img src="bhu-logo.png" alt="BHU Logo" class="h-14 w-auto object-contain">
+            </div>
+
+            <!-- Centre -->
+            <div class="text-center flex-1">
+                <p class="header-pill mb-3 mx-auto w-fit">
+                    <span class="dot"></span>
+                    Students' Society of Assam, BHU
+                </p>
+                <h1 style="font-size:clamp(1.6rem,4vw,2.7rem); font-weight:800; color:#fff; letter-spacing:-0.02em; line-height:1.15;">
+                    BHU Cutoff Explorer
+                </h1>
+                <p style="color:rgba(255,255,255,0.55); font-size:14px; margin-top:8px; font-weight:400;">
+                    Official admissions data · All rounds · All colleges
+                </p>
+            </div>
+
+            <!-- SSA Logo -->
+            <div class="logo-badge flex-shrink-0">
+                <img src="ssa-logo.png" alt="SSA BHU Logo" class="h-14 w-auto object-contain rounded-full">
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- ══════════════════════════════════════ MAIN ══════════════════════════════════════ -->
+<main class="max-w-6xl mx-auto px-4 py-8 space-y-6">
+
+    <!-- Year Tabs -->
+    <div class="flex items-center justify-center gap-2 flex-wrap">
+        <div id="yearTabsContainer" class="flex gap-2 flex-wrap justify-center"></div>
+    </div>
+
+    <!-- UG / PG Toggle -->
+    <div class="flex justify-center">
+        <div class="toggle-wrap">
+            <button id="btnUG" class="toggle-btn active" onclick="switchCourseType('UG')">UG Admissions</button>
+            <button id="btnPG" class="toggle-btn" onclick="switchCourseType('PG')">PG Admissions</button>
+        </div>
+    </div>
+
+<!-- Filters -->
+    <div class="filter-card">
+        <div class="filter-card-header">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9B1C1C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+            <span style="font-size:12px; font-weight:700; color:#374151; text-transform:uppercase; letter-spacing:0.06em;">Filter Results</span>
+        </div>
+
+        <!-- NEW SMART SEARCH BAR -->
+        <div style="padding: 16px 20px 0 20px;">
+            <div style="position: relative;">
+                <svg style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #94a3b8;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" id="globalSearch" placeholder="Search for a program (e.g., Chemistry) or college..." style="width: 100%; padding: 10px 14px 10px 38px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 13.5px; outline: none; transition: all 0.2s; color: #1e293b;" onfocus="this.style.borderColor='#9B1C1C'; this.style.boxShadow='0 0 0 3px rgba(155,28,28,0.1)';" onblur="this.style.borderColor='#e2e8f0'; this.style.boxShadow='none';">
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5 p-5">
+            <div>
+                <div class="filter-label">Program</div>
+                <select id="courseFilter" class="filter-select">
+                    <option value="">All Programs</option>
+                </select>
+            </div>
+            <div>
+                <div class="filter-label">College</div>
+                <select id="collegeFilter" class="filter-select">
+                    <option value="">All Colleges</option>
+                </select>
+            </div>
+            <div>
+                <div class="filter-label">Category</div>
+                <select id="categoryFilter" class="filter-select">
+                    <option value="">All Categories</option>
+                </select>
+            </div>
+            <div>
+                <div class="filter-label">Round</div>
+                <select id="roundFilter" class="filter-select">
+                    <option value="">All Rounds</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading -->
+    <div id="loading">
+        <div style="max-width:500px;margin:0 auto;space-y:12px;">
+            <p style="color:#94a3b8;font-size:14px;font-weight:500;margin-bottom:20px;">Loading cutoff data…</p>
+            <div class="shimmer mb-3" style="width:100%;height:14px;"></div>
+            <div class="shimmer mb-3" style="width:80%;height:14px;"></div>
+            <div class="shimmer" style="width:90%;height:14px;"></div>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="data-table-wrap hidden" id="tableContainer">
+
+        <!-- Table header bar -->
+        <div style="padding:14px 20px;border-bottom:1px solid #e8edf4;display:flex;align-items:center;justify-between;background:#fafbfc;flex-wrap:wrap;gap:8px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9B1C1C" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
+                <span style="font-size:13px;font-weight:700;color:#374151;">Cutoff Data</span>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:8px; flex-wrap:wrap;">
+                <button onclick="downloadCSV()" class="page-btn" style="padding: 5px 10px; font-size: 11.5px;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                    CSV
+                </button>
+                <button onclick="downloadPDF()" class="page-btn" style="padding: 5px 10px; font-size: 11.5px; color: #9B1C1C;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M9 15v-6h3.5a2 2 0 1 1 0 4H9"></path></svg>
+                    PDF
+                </button>
+                <button onclick="downloadPNG()" class="page-btn" style="padding: 5px 10px; font-size: 11.5px; color: #047857;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                    PNG
+                </button>
+                
+                <span id="pageInfo" style="font-size:12px;color:#64748b;font-weight:500;margin-left:8px;">Showing 0 entries</span>
+            </div>
+            
+        </div>
+
+        <!-- The actual Table that was missing -->
+        <div class="overflow-x-auto">
+            <table class="data-table w-full text-left border-collapse">
+                <thead>
+                    <tr>
+                        <th>Program Name</th>
+                        <th>College / Faculty</th>
+                        <th>Category</th>
+                        <th>Round</th>
+                        <th>Min Score</th>
+                        <th>Max Score</th>
+                        <th>Rank Range</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div style="padding:14px 20px;border-top:1px solid #f1f5f9;display:flex;align-items:center;justify-between;background:#fafbfc;flex-wrap:wrap;gap:10px;">
+            <div style="font-size:12.5px;color:#64748b;"></div>
+            <div style="display:flex;gap:8px;">
+                <button id="btnPrev" class="page-btn" onclick="changePage(-1)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+                    Previous
+                </button>
+                <button id="btnNext" class="page-btn" onclick="changePage(1)">
+                    Next
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+
+</main>
+
+
+    
+    
+<!-- ══════════════════════════════════════ FOOTER ══════════════════════════════════════ -->
+<footer style="background:white;border-top:1px solid #e2e8f0;margin-top:48px;padding:40px 0;">
+    <div class="max-w-6xl mx-auto px-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+
+            <div>
+                <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;margin-bottom:14px;">Official BHU Links</p>
+                <div class="space-y-3">
+                    <a href="https://admission.bhu.ac.in/en" target="_blank" class="flex items-center gap-2 group" style="font-size:14px;font-weight:500;color:#1e293b;text-decoration:none;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9B1C1C" stroke-width="2" stroke-linecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                        Admission Portal & Application Links (2026)
+                    </a>
+                    <a href="https://bhu.ac.in/" target="_blank" class="flex items-center gap-2" style="font-size:14px;font-weight:500;color:#1e293b;text-decoration:none;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9B1C1C" stroke-width="2" stroke-linecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                        BHU Official Website
+                    </a>
+                </div>
+            </div>
+
+            <div>
+                <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;margin-bottom:14px;">Students' Society of Assam, BHU</p>
+                <div class="space-y-3">
+                    <a href="https://ssabhu.netlify.app/" target="_blank" class="flex items-center gap-2" style="font-size:14px;font-weight:500;color:#1e293b;text-decoration:none;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9B1C1C" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                        Official SSA Website
+                    </a>
+                    <a href="https://www.instagram.com/ssa__bhu/" target="_blank" class="flex items-center gap-2" style="font-size:14px;font-weight:500;color:#1e293b;text-decoration:none;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="#9B1C1C"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+                        @ssa__bhu on Instagram
+                    </a>
+                    <a href="https://chat.whatsapp.com/ETWNfTeoB4Y0HDpaQ9MKSe" target="_blank" class="flex items-center gap-2" style="font-size:14px;font-weight:500;color:#1e293b;text-decoration:none;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+                        Fresher Helpdesk (WhatsApp)
+                    </a>
+                </div>
+            </div>
+
+        </div>
+
+
+        <div style="margin-top:32px;padding-top:20px;border-top:1px solid #f1f5f9;text-align:center;font-size:12.5px;color:#94a3b8;font-weight:400;line-height:1.6;">
+            © 2026 Students' Society of Assam, Banaras Hindu University — built for the student community.<br>
+            <span style="opacity: 0.85;">Designed & Developed by <a href="https://dkalpa.pages.dev/" target="_blank" style="font-weight:600; color:#475569; text-decoration:none; transition: color 0.2s;" onmouseover="this.style.color='#9B1C1C'" onmouseout="this.style.color='#475569'">Kalpa Dihingia</a></span>
+        </div>
+        
+    </div>
+</footer>
+
+<script>
+    const SPREADSHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQnn0eQbpkOgdDYoN78j2pA1QL2RiSu8GT4FLbaxREwaj9wYMnH3IwYaYaJB31oi8RfPBhJ6ANyl3l1/pub?gid=555666777&single=true&output=csv";
+
+    let globalData = [];
+    let activeCourseType = 'UG';
+    let activeYear = '';
+    let availableYears = [];
+    let currentFilteredData = [];
+    let currentPage = 1;
+    const rowsPerPage = 20;
+
+    Papa.parse(SPREADSHEET_CSV_URL, {
+        download: true,
+        header: true,
+        complete: function(results) {
+            globalData = results.data.filter(row =>
+                row['Program_Name'] &&
+                row['Program_Name'] !== 'Program_Name' &&
+                row['Min NTA score'] !== 'Cutoff_Score'
+            );
+
+            globalData.forEach(row => {
+                if (!row['Year']) row['Year'] = '2025';
+                if (row['Allocated Category']) {
+                    let c = row['Allocated Category'].trim();
+                    if (c.startsWith(')')) c = c.substring(1).trim();
+                    row['Allocated Category'] = c.toUpperCase();
+                }
+            });
+
+            availableYears = [...new Set(globalData.map(i => i['Year'].trim()))].sort((a,b) => b - a);
+            activeYear = availableYears[0];
+
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('tableContainer').classList.remove('hidden');
+
+            renderYearTabs();
+            updateView();
+        }
+    });
+
+    function renderYearTabs() {
+        const c = document.getElementById('yearTabsContainer');
+        c.innerHTML = '';
+        availableYears.forEach(year => {
+            const btn = document.createElement('button');
+            btn.className = 'year-tab' + (year === activeYear ? ' active' : '');
+            btn.textContent = year + ' Cutoffs';
+            btn.onclick = () => switchYear(year);
+            c.appendChild(btn);
+        });
+    }
+
+    function switchYear(year) {
+        activeYear = year;
+        renderYearTabs();
+        resetFilters();
+        updateView();
+    }
+
+    function switchCourseType(type) {
+        activeCourseType = type;
+        document.getElementById('btnUG').className = 'toggle-btn' + (type === 'UG' ? ' active' : '');
+        document.getElementById('btnPG').className = 'toggle-btn' + (type === 'PG' ? ' active' : '');
+        resetFilters();
+        updateView();
+    }
+
+    function resetFilters() {
+        ['courseFilter','collegeFilter','categoryFilter','roundFilter'].forEach(id => {
+            document.getElementById(id).value = "";
+        });
+        const searchInput = document.getElementById('globalSearch');
+        if (searchInput) searchInput.value = "";
+    }
+
+    // ══════ THIS WAS THE MISSING FUNCTION! ══════
+    function updateView() {
+        const typeData = globalData.filter(row => {
+            const t = (row['Course Type'] || 'UG').toUpperCase().trim();
+            return t === activeCourseType && row['Year'].trim() === activeYear;
+        });
+
+        const uniq = key => [...new Set(typeData.map(r => r[key]).filter(Boolean))].sort();
+        const populate = (id, vals) => {
+            const el = document.getElementById(id);
+            const cur = el.value;
+            el.innerHTML = '<option value="">All</option>';
+            vals.forEach(v => el.innerHTML += `<option value="${v}">${v}</option>`);
+            if (vals.includes(cur)) el.value = cur;
+        };
+
+        populate('courseFilter',   uniq('Program_Name'));
+        populate('collegeFilter',  uniq('Faculty/College Name'));
+        populate('categoryFilter', uniq('Allocated Category'));
+        populate('roundFilter',    uniq('Round'));
+
+        filterTableData(typeData);
+    }
+    // ════════════════════════════════════════════
+
+    ['courseFilter','collegeFilter','categoryFilter','roundFilter'].forEach(id => {
+        document.getElementById(id).addEventListener('change', updateViewFilterOnly);
+    });
+    
+    const searchEl = document.getElementById('globalSearch');
+    if (searchEl) searchEl.addEventListener('input', updateViewFilterOnly);
+
+    function updateViewFilterOnly() {
+        const typeData = globalData.filter(row => {
+            const t = (row['Course Type'] || 'UG').toUpperCase().trim();
+            return t === activeCourseType && row['Year'].trim() === activeYear;
+        });
+        filterTableData(typeData);
+    }
+
+    function filterTableData(base) {
+        const v = id => document.getElementById(id).value;
+        const searchInput = document.getElementById('globalSearch');
+        const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
+        currentFilteredData = base.filter(row => {
+            const prog = (row['Program_Name'] || '').toLowerCase();
+            const coll = (row['Faculty/College Name'] || '').toLowerCase();
+            const matchesSearch = searchTerm === '' || prog.includes(searchTerm) || coll.includes(searchTerm);
+
+            return matchesSearch &&
+                (!v('courseFilter')   || row['Program_Name'] === v('courseFilter')) &&
+                (!v('collegeFilter')  || row['Faculty/College Name'] === v('collegeFilter')) &&
+                (!v('categoryFilter') || row['Allocated Category'] === v('categoryFilter')) &&
+                (!v('roundFilter')    || row['Round'] === v('roundFilter'));
+        });
+
+        // FORCE A-Z ALPHABETICAL SORTING
+        currentFilteredData.sort((a, b) => {
+            const nameA = (a['Program_Name'] || '').toLowerCase();
+            const nameB = (b['Program_Name'] || '').toLowerCase();
+            return nameA.localeCompare(nameB);
+        });
+
+        currentPage = 1;
+        displayCurrentPage();
+    }
+
+    function changePage(dir) {
+        currentPage += dir;
+        displayCurrentPage();
+        document.getElementById('tableContainer').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function displayCurrentPage() {
+        const total = currentFilteredData.length;
+        const pages = Math.ceil(total / rowsPerPage) || 1;
+        if (currentPage < 1) currentPage = 1;
+        if (currentPage > pages) currentPage = pages;
+
+        const start = (currentPage - 1) * rowsPerPage;
+        const end   = start + rowsPerPage;
+        renderTable(currentFilteredData.slice(start, end));
+
+        const info = document.getElementById('pageInfo');
+        if (total === 0) {
+            info.textContent = 'No results';
+        } else {
+            info.innerHTML = `Showing <b>${start + 1}</b>–<b>${Math.min(end, total)}</b> of <b>${total}</b> entries`;
+        }
+
+        document.getElementById('btnPrev').disabled = currentPage === 1;
+        document.getElementById('btnNext').disabled = currentPage === pages;
+    }
+
+    function catClass(cat) {
+        const map = { OBC:'OBC', SC:'SC', ST:'ST', EWS:'EWS', UR:'UR', GENERAL:'GENERAL', PH:'PH', PWD:'PWD' };
+        for (const k in map) { if (cat.includes(k)) return map[k]; }
+        return '';
+    }
+
+    function renderTable(data) {
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '';
+        
+        // Friendly Empty State & SSA Easter Egg
+        if (data.length === 0) {
+            tbody.innerHTML = `
+                <tr><td colspan="7">
+                    <div class="empty-state" style="padding: 60px 20px;">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5" style="margin: 0 auto 16px;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        <p style="font-size:16px;font-weight:700;color:#64748b;margin-bottom:8px;">Oops! No cutoffs found.</p>
+                        <p style="font-size:13.5px;color:#94a3b8;">Try checking your spelling, or clear your filters to see more results.</p>
+                        <p id="easterEgg" style="font-size:12px;color:#F59E0B;font-weight:600;margin-top:16px;display:none;">Joy Aai Asom! ✨</p>
+                    </div>
+                </td></tr>`;
+                
+            const searchInput = document.getElementById('globalSearch');
+            const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+            if (searchTerm === 'ssa' || searchTerm === 'assam') {
+                const egg = document.getElementById('easterEgg');
+                if (egg) egg.style.display = 'block';
+            }
+            return;
+        }
+
+        data.forEach(row => {
+            const prog  = row['Program_Name'] || '—';
+            const coll  = row['Faculty/College Name'] || '—';
+            const cat   = row['Allocated Category'] || '—';
+            const round = row['Round'] || '—';
+
+            const minR = row['Min NTA score'];
+            const maxR = row['max_score'];
+            const minScore = (!isNaN(parseFloat(minR))) ? parseFloat(minR).toFixed(2) : (minR || '—');
+            const maxScore = (!isNaN(parseFloat(maxR))) ? parseFloat(maxR).toFixed(2) : (maxR || '—');
+
+            const minRk = row['min_rank'] || '';
+            const maxRk = row['max_rank'] || '';
+            const rankStr = (minRk && maxRk) ? `${minRk} – ${maxRk}` : '—';
+
+            const tr = document.createElement('tr');
+            tr.className = "even:bg-gray-50 odd:bg-white hover:bg-yellow-50 border-b transition-colors duration-150";
+            
+            // Fixed the variable names here! (prog, coll, cat, rankStr)
+            tr.innerHTML = `
+                <td data-label="Program" class="p-4 font-medium text-gray-900">${prog}</td>
+                <td data-label="College" class="p-4 text-xs text-gray-600">${coll}</td>
+                <td data-label="Category" class="p-4"><span class="cat-chip ${catClass(cat)}">${cat}</span></td>
+                <td data-label="Round" class="p-4 text-gray-600 font-medium">${round}</td>
+                <td data-label="Min Score" class="p-4 font-bold text-red-600">${minScore}</td>
+                <td data-label="Max Score" class="p-4 font-semibold text-gray-700">${maxScore}</td>
+                <td data-label="Rank Range" class="p-4 text-gray-600 text-xs">${rankStr}</td>
+            `;
+            
+            tbody.appendChild(tr);
+        });
+    }
+
+    function downloadCSV() {
+        if (!currentFilteredData || currentFilteredData.length === 0) {
+            alert("No data available to download. Please adjust your filters.");
+            return;
+        }
+
+        // 1. Format the data beautifully for the downloaded spreadsheet
+        const exportData = currentFilteredData.map(row => ({
+            "Course Type": activeCourseType,
+            "Year": activeYear,
+            "Program Name": row['Program_Name'] || '—',
+            "College/Faculty": row['Faculty/College Name'] || '—',
+            "Category": row['Allocated Category'] || '—',
+            "Round": row['Round'] || '—',
+            "Min NTA Score": row['Min NTA score'] || '—',
+            "Max Score": row['max_score'] || '—',
+            "Min Rank": row['min_rank'] || '—',
+            "Max Rank": row['max_rank'] || '—'
+        }));
+
+        // 2. Use PapaParse to instantly turn the data into CSV format
+        const csv = Papa.unparse(exportData);
+        
+        // 3. Create a temporary download link and trigger the download
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        
+        link.setAttribute("href", url);
+        // Automatically names the file based on what they are looking at (e.g., BHU_Cutoffs_UG_2025.csv)
+        link.setAttribute("download", `BHU_Cutoffs_${activeCourseType}_${activeYear}.csv`);
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    function downloadPDF() {
+        if (!currentFilteredData || currentFilteredData.length === 0) {
+            alert("No data available to download.");
+            return;
+        }
+
+        // Initialize jsPDF (Landscape mode, points, A4 size)
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('l', 'pt', 'a4'); 
+
+        // Add a nice header title to the PDF
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(16);
+        doc.text(`BHU Cutoffs - ${activeCourseType} (${activeYear})`, 40, 40);
+        
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        doc.text("Generated by the Students' Society of Assam", 40, 58);
+
+        // Format data for the PDF table (exports ALL filtered data, not just the current page)
+        const tableHeaders = [['Program Name', 'College / Faculty', 'Category', 'Round', 'Min Score', 'Max Score', 'Rank Range']];
+        const tableBody = currentFilteredData.map(row => {
+            const minRk = row['min_rank'] || '';
+            const maxRk = row['max_rank'] || '';
+            const rankStr = (minRk && maxRk) ? `${minRk} - ${maxRk}` : '—';
+            
+            return [
+                row['Program_Name'] || '—',
+                row['Faculty/College Name'] || '—',
+                row['Allocated Category'] || '—',
+                row['Round'] || '—',
+                row['Min NTA score'] || '—',
+                row['max_score'] || '—',
+                rankStr
+            ];
+        });
+
+        // Generate the table
+        doc.autoTable({
+            head: tableHeaders,
+            body: tableBody,
+            startY: 75,
+            theme: 'striped',
+            headStyles: { fillColor: [155, 28, 28] }, // BHU Red header
+            styles: { fontSize: 8, cellPadding: 4 },
+            columnStyles: { 0: { cellWidth: 150 } } // Give the program name more breathing room
+        });
+
+        doc.save(`BHU_Cutoffs_${activeCourseType}_${activeYear}.pdf`);
+    }
+
+    function downloadPNG() {
+        if (currentFilteredData.length === 0) {
+            alert("No data available to capture.");
+            return;
+        }
+
+        // Inform user because images only capture what is visible on the screen
+        const tableElement = document.querySelector('.data-table');
+        
+        // Use html2canvas to take a high-res "screenshot" of the table
+        html2canvas(tableElement, { scale: 2, backgroundColor: "#ffffff" }).then(canvas => {
+            const link = document.createElement('a');
+            link.download = `BHU_Cutoffs_${activeCourseType}_${activeYear}_Page${currentPage}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        });
+    }
+
+    
+</script>
+</body>
+</html>
