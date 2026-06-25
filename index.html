@@ -229,7 +229,7 @@
                            placeholder="Search program or college..." 
                            class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500 outline-none shadow-sm"
                            autocomplete="off">
-                </div>
+                </div> id="globalSuggestionsBox" class="suggestions-box hidden"></div>
             </div>
             
             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
@@ -738,6 +738,52 @@
 document.addEventListener('click', (e) => {
     if (e.target !== progInput) sugBox.classList.add('hidden');
 });
+
+    // --- Global Search Suggestion Logic ---
+    const globalInput = document.getElementById('globalSearch');
+    const globalSugBox = document.getElementById('globalSuggestionsBox');
+
+    globalInput.addEventListener('input', () => {
+        const val = globalInput.value.toLowerCase();
+        globalSugBox.innerHTML = '';
+    
+        if (!globalData || globalData.length === 0 || !val) { 
+            globalSugBox.classList.add('hidden'); 
+            // Trigger empty filter to reset table if search is cleared
+            filterExplorerTable(); 
+            return; 
+        }
+
+        const typeData = globalData.filter(row => (row['Course Type'] || 'UG').toUpperCase().trim() === activeCourseType && row['Year'].trim() === activeYear);
+        const allSearchables = [...new Set([...typeData.map(r => r['Program_Name']), ...typeData.map(r => r['Faculty/College Name'])].filter(Boolean))];
+        const matches = allSearchables.filter(p => p.toLowerCase().includes(val));
+
+        if (matches.length > 0) {
+            globalSugBox.classList.remove('hidden');
+            matches.slice(0, 10).forEach(m => {
+                const div = document.createElement('div');
+                div.className = 'suggestion-item';
+                div.textContent = m;
+                div.onclick = () => {
+                    globalInput.value = m;
+                    globalSugBox.classList.add('hidden');
+                    // Trigger the filter logic to update table with selection
+                    filterExplorerTable();
+                };
+                globalSugBox.appendChild(div);
+            });
+        } else {
+            globalSugBox.classList.add('hidden');
+        }
+    
+        // Also trigger live filter while typing
+        filterExplorerTable();
+    });
+
+    // Close when clicking outside
+    document.addEventListener('click', (e) => {
+    if (e.target !== globalInput) globalSugBox.classList.add('hidden');
+    });
     
 </script>
 </body>
