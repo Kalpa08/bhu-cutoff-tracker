@@ -343,14 +343,20 @@
         </div>
     </div>
 
-<!-- Filters -->
-    <div class="filter-card">
-        <div class="filter-card-header">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9B1C1C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-            <span style="font-size:12px; font-weight:700; color:#374151; text-transform:uppercase; letter-spacing:0.06em;">Filter Results</span>
+<!-- Filters & Smart Matcher -->
+    <div class="filter-card relative">
+        <div class="filter-card-header flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9B1C1C" stroke-width="2.5" stroke-linecap="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                <span style="font-size:12px; font-weight:700; color:#374151; text-transform:uppercase; letter-spacing:0.06em;">Smart Matcher & Filters</span>
+            </div>
+            <!-- Legend for PG Freshers -->
+            <div id="pgLegend" style="display: none;" class="text-[11px] font-medium text-gray-500 bg-gray-100 px-3 py-1.5 rounded-md border border-gray-200">
+                <span class="text-red-700 font-bold">C1:</span> BHU Quota &nbsp;|&nbsp; <span class="text-red-700 font-bold">C2:</span> Open Quota
+            </div>
         </div>
 
-        <!-- NEW SMART SEARCH BAR -->
+        <!-- SMART SEARCH BAR -->
         <div style="padding: 16px 20px 0 20px;">
             <div style="position: relative;">
                 <svg style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #94a3b8;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
@@ -358,30 +364,51 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5 p-5">
+        <!-- Dynamic Grid for Inputs -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 p-5">
+            
+            <!-- SMART MATCHER INPUTS -->
+            <div class="col-span-2 sm:col-span-1">
+                <div class="filter-label" style="color: #9B1C1C;">Your Score</div>
+                <input type="number" id="userScoreInput" placeholder="e.g. 185" class="filter-select" style="border-color: #fca5a5; background-image: none; padding-right: 12px;">
+            </div>
+
+            <div>
+                <div class="filter-label" style="color: #9B1C1C;">Category</div>
+                <select id="userCategory" class="filter-select" style="border-color: #fca5a5;">
+                    <option value="">All</option>
+                    <option value="GENERAL">General / UR</option>
+                    <option value="OBC">OBC</option>
+                    <option value="EWS">EWS</option>
+                    <option value="SC">SC</option>
+                    <option value="ST">ST</option>
+                    <option value="PWD">PWD</option>
+                    <option value="WARD">WARD</option>
+                </select>
+            </div>
+
+            <!-- This wrapper hides the BHU dropdown for UG -->
+            <div id="bhuGradWrapper" style="display: none;">
+                <div class="filter-label" style="color: #9B1C1C;">BHU Grad?</div>
+                <select id="userBHU" class="filter-select" style="border-color: #fca5a5;">
+                    <option value="">Any</option>
+                    <option value="YES">Yes (C1 + C2)</option>
+                    <option value="NO">No (C2 Only)</option>
+                </select>
+            </div>
+
+            <!-- STANDARD FILTERS -->
             <div>
                 <div class="filter-label">Program</div>
-                <select id="courseFilter" class="filter-select">
-                    <option value="">All Programs</option>
-                </select>
+                <select id="courseFilter" class="filter-select"><option value="">All Programs</option></select>
             </div>
             <div>
                 <div class="filter-label">College</div>
-                <select id="collegeFilter" class="filter-select">
-                    <option value="">All Colleges</option>
-                </select>
-            </div>
-            <div>
-                <div class="filter-label">Category</div>
-                <select id="categoryFilter" class="filter-select">
-                    <option value="">All Categories</option>
-                </select>
+                <select id="collegeFilter" class="filter-select"><option value="">All Colleges</option></select>
             </div>
             <div>
                 <div class="filter-label">Round</div>
-                <select id="roundFilter" class="filter-select">
-                    <option value="">All Rounds</option>
-                </select>
+                <select id="roundFilter" class="filter-select"><option value="">All Rounds</option></select>
             </div>
         </div>
     </div>
