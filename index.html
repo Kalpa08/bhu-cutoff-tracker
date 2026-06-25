@@ -660,20 +660,65 @@
         const v = id => document.getElementById(id).value;
         const searchInput = document.getElementById('globalSearch');
         const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+        
+        const userScoreRaw = document.getElementById('userScoreInput') ? document.getElementById('userScoreInput').value : '';
+        const userScore = userScoreRaw ? parseFloat(userScoreRaw) : null;
+        
+        const baseCat = v('userCategory');
+        const isBHU = v('userBHU');
+        const isPG = activeCourseType === 'PG';
 
         currentFilteredData = base.filter(row => {
             const prog = (row['Program_Name'] || '').toLowerCase();
             const coll = (row['Faculty/College Name'] || '').toLowerCase();
             const matchesSearch = searchTerm === '' || prog.includes(searchTerm) || coll.includes(searchTerm);
+            
+            const matchesBasic = matchesSearch &&
+                (!v('courseFilter')  || row['Program_Name'] === v('courseFilter')) &&
+                (!v('collegeFilter') || row['Faculty/College Name'] === v('collegeFilter')) &&
+                (!v('roundFilter')   || row['Round'] === v('roundFilter'));
 
-            return matchesSearch &&
-                (!v('courseFilter')   || row['Program_Name'] === v('courseFilter')) &&
-                (!v('collegeFilter')  || row['Faculty/College Name'] === v('collegeFilter')) &&
-                (!v('categoryFilter') || row['Allocated Category'] === v('categoryFilter')) &&
-                (!v('roundFilter')    || row['Round'] === v('roundFilter'));
+            // ══════ THE SMART QUOTA LOGIC ══════
+            let matchesCategory = true;
+            if (baseCat !== "") {
+                const rowCat = (row['Allocated Category'] || '').toUpperCase().trim();
+                let allowedCats = [];
+
+                if (isPG) {
+                    // Map GENERAL to UR for PG data matching
+                    const pgCat = baseCat === 'GENERAL' ? 'UR' : baseCat;
+                    
+                    if (isBHU === 'YES') {
+                        // BHU Grad gets C1/C2 of their category PLUS C1/C2 of UR
+                        allowedCats = [`C1 ${pgCat}`, `C2 ${pgCat}`, 'C1 UR', 'C2 UR'];
+                    } else if (isBHU === 'NO') {
+                        // Non-BHU gets C2 of their category PLUS C2 of UR
+                        allowedCats = [`C2 ${pgCat}`, 'C2 UR'];
+                    } else {
+                        // If they haven't answered YES/NO yet, show all to prevent empty table
+                        allowedCats = [`C1 ${pgCat}`, `C2 ${pgCat}`, 'C1 UR', 'C2 UR'];
+                    }
+                } else {
+                    // UG Logic: Exact match on category PLUS they can access GENERAL
+                    allowedCats = [baseCat, 'GENERAL'];
+                }
+                
+                matchesCategory = allowedCats.includes(rowCat);
+            }
+
+            // ══════ THE SCORE MATCHER ══════
+            let matchesScore = true;
+            if (userScore !== null && row['Min NTA score'] && !isNaN(parseFloat(row['Min NTA score']))) {
+                const cutoff = parseFloat(row['Min NTA score']);
+                // Hide if score is more than 15 points below the historical cutoff
+                if (userScore < (cutoff - 15)) {
+                    matchesScore = false; 
+                }
+            }
+
+            return matchesBasic && matchesCategory && matchesScore;
         });
 
-        // FORCE A-Z ALPHABETICAL SORTING
         currentFilteredData.sort((a, b) => {
             const nameA = (a['Program_Name'] || '').toLowerCase();
             const nameB = (b['Program_Name'] || '').toLowerCase();
