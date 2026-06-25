@@ -601,12 +601,22 @@
     }
 
     function switchCourseType(type) {
-        activeCourseType = type;
-        document.getElementById('btnUG').className = 'toggle-btn' + (type === 'UG' ? ' active' : '');
-        document.getElementById('btnPG').className = 'toggle-btn' + (type === 'PG' ? ' active' : '');
-        resetFilters();
-        updateView();
-    }
+    activeCourseType = type;
+    
+    // Update Button Styling
+    document.getElementById('btnUG').className = 'toggle-btn' + (type === 'UG' ? ' active' : '');
+    document.getElementById('btnPG').className = 'toggle-btn' + (type === 'PG' ? ' active' : '');
+    
+    // Toggle PG Specific UI Elements (BHU Grad Dropdown and Legend)
+    const bhuGradWrapper = document.getElementById('bhuGradWrapper');
+    const pgLegend = document.getElementById('pgLegend');
+    
+    if (bhuGradWrapper) bhuGradWrapper.style.display = (type === 'PG') ? 'block' : 'none';
+    if (pgLegend) pgLegend.style.display = (type === 'PG') ? 'block' : 'none';
+    
+    resetFilters();
+    updateView();
+}
 
     function resetFilters() {
         ['courseFilter','collegeFilter','categoryFilter','roundFilter'].forEach(id => {
@@ -639,10 +649,13 @@
 
         filterTableData(typeData);
     }
+    
     // ════════════════════════════════════════════
 
-    ['courseFilter','collegeFilter','categoryFilter','roundFilter'].forEach(id => {
-        document.getElementById(id).addEventListener('change', updateViewFilterOnly);
+    // NEW: Updated event listeners for all Smart Matcher inputs
+    ['courseFilter','collegeFilter','roundFilter', 'userScoreInput', 'userCategory', 'userBHU'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', updateViewFilterOnly);
     });
     
     const searchEl = document.getElementById('globalSearch');
@@ -657,77 +670,78 @@
     }
 
     function filterTableData(base) {
-        const v = id => document.getElementById(id).value;
-        const searchInput = document.getElementById('globalSearch');
-        const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    const v = id => document.getElementById(id).value;
+    const searchInput = document.getElementById('globalSearch');
+    const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    
+    // Score Matcher Inputs
+    const userScoreRaw = document.getElementById('userScoreInput') ? document.getElementById('userScoreInput').value : '';
+    const userScore = userScoreRaw ? parseFloat(userScoreRaw) : null;
+    
+    const baseCat = v('userCategory');
+    const isBHU = v('userBHU');
+    const isPG = activeCourseType === 'PG';
+
+    currentFilteredData = base.filter(row => {
+        const prog = (row['Program_Name'] || '').toLowerCase();
+        const coll = (row['Faculty/College Name'] || '').toLowerCase();
+        const matchesSearch = searchTerm === '' || prog.includes(searchTerm) || coll.includes(searchTerm);
         
-        const userScoreRaw = document.getElementById('userScoreInput') ? document.getElementById('userScoreInput').value : '';
-        const userScore = userScoreRaw ? parseFloat(userScoreRaw) : null;
-        
-        const baseCat = v('userCategory');
-        const isBHU = v('userBHU');
-        const isPG = activeCourseType === 'PG';
+        const matchesBasic = matchesSearch &&
+            (!v('courseFilter')  || row['Program_Name'] === v('courseFilter')) &&
+            (!v('collegeFilter') || row['Faculty/College Name'] === v('collegeFilter')) &&
+            (!v('roundFilter')   || row['Round'] === v('roundFilter'));
 
-        currentFilteredData = base.filter(row => {
-            const prog = (row['Program_Name'] || '').toLowerCase();
-            const coll = (row['Faculty/College Name'] || '').toLowerCase();
-            const matchesSearch = searchTerm === '' || prog.includes(searchTerm) || coll.includes(searchTerm);
-            
-            const matchesBasic = matchesSearch &&
-                (!v('courseFilter')  || row['Program_Name'] === v('courseFilter')) &&
-                (!v('collegeFilter') || row['Faculty/College Name'] === v('collegeFilter')) &&
-                (!v('roundFilter')   || row['Round'] === v('roundFilter'));
+        // ══════ THE SMART QUOTA LOGIC ══════
+        let matchesCategory = true;
+        if (baseCat !== "") {
+            const rowCat = (row['Allocated Category'] || '').toUpperCase().trim();
+            let allowedCats = [];
 
-            // ══════ THE SMART QUOTA LOGIC ══════
-            let matchesCategory = true;
-            if (baseCat !== "") {
-                const rowCat = (row['Allocated Category'] || '').toUpperCase().trim();
-                let allowedCats = [];
-
-                if (isPG) {
-                    // Map GENERAL to UR for PG data matching
-                    const pgCat = baseCat === 'GENERAL' ? 'UR' : baseCat;
-                    
-                    if (isBHU === 'YES') {
-                        // BHU Grad gets C1/C2 of their category PLUS C1/C2 of UR
-                        allowedCats = [`C1 ${pgCat}`, `C2 ${pgCat}`, 'C1 UR', 'C2 UR'];
-                    } else if (isBHU === 'NO') {
-                        // Non-BHU gets C2 of their category PLUS C2 of UR
-                        allowedCats = [`C2 ${pgCat}`, 'C2 UR'];
-                    } else {
-                        // If they haven't answered YES/NO yet, show all to prevent empty table
-                        allowedCats = [`C1 ${pgCat}`, `C2 ${pgCat}`, 'C1 UR', 'C2 UR'];
-                    }
-                } else {
-                    // UG Logic: Exact match on category PLUS they can access GENERAL
-                    allowedCats = [baseCat, 'GENERAL'];
-                }
+            if (isPG) {
+                // Map GENERAL to UR for PG data matching
+                const pgCat = baseCat === 'GENERAL' ? 'UR' : baseCat;
                 
-                matchesCategory = allowedCats.includes(rowCat);
-            }
-
-            // ══════ THE SCORE MATCHER ══════
-            let matchesScore = true;
-            if (userScore !== null && row['Min NTA score'] && !isNaN(parseFloat(row['Min NTA score']))) {
-                const cutoff = parseFloat(row['Min NTA score']);
-                // Hide if score is more than 15 points below the historical cutoff
-                if (userScore < (cutoff - 15)) {
-                    matchesScore = false; 
+                if (isBHU === 'YES') {
+                    // BHU Grad gets C1 and C2 of their category, PLUS C1 and C2 of UR
+                    allowedCats = [`C1 ${pgCat}`, `C2 ${pgCat}`, 'C1 UR', 'C2 UR'];
+                } else if (isBHU === 'NO') {
+                    // Non-BHU gets C2 of their category PLUS C2 of UR
+                    allowedCats = [`C2 ${pgCat}`, 'C2 UR'];
+                } else {
+                    // If they haven't answered YES/NO yet, show all matching categories
+                    allowedCats = [`C1 ${pgCat}`, `C2 ${pgCat}`, 'C1 UR', 'C2 UR'];
                 }
+            } else {
+                // UG Logic: Exact match on category PLUS they can access GENERAL/UR
+                allowedCats = [baseCat, 'GENERAL', 'UR'];
             }
+            
+            matchesCategory = allowedCats.includes(rowCat);
+        }
 
-            return matchesBasic && matchesCategory && matchesScore;
-        });
+        // ══════ THE SCORE MATCHER ══════
+        let matchesScore = true;
+        if (userScore !== null && row['Min NTA score'] && !isNaN(parseFloat(row['Min NTA score']))) {
+            const cutoff = parseFloat(row['Min NTA score']);
+            // Hide programs if the historical cutoff is more than 15 points higher than the user's score
+            if (userScore < (cutoff - 15)) {
+                matchesScore = false; 
+            }
+        }
 
-        currentFilteredData.sort((a, b) => {
-            const nameA = (a['Program_Name'] || '').toLowerCase();
-            const nameB = (b['Program_Name'] || '').toLowerCase();
-            return nameA.localeCompare(nameB);
-        });
+        return matchesBasic && matchesCategory && matchesScore;
+    });
 
-        currentPage = 1;
-        displayCurrentPage();
-    }
+    currentFilteredData.sort((a, b) => {
+        const nameA = (a['Program_Name'] || '').toLowerCase();
+        const nameB = (b['Program_Name'] || '').toLowerCase();
+        return nameA.localeCompare(nameB);
+    });
+
+    currentPage = 1;
+    displayCurrentPage();
+}
 
     function changePage(dir) {
         currentPage += dir;
